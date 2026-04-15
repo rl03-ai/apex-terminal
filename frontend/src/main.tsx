@@ -1,11 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import './styles.css'
 import App from './App'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </StrictMode>,
 )
 
@@ -16,7 +19,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault()
   deferredPrompt = e
 
-  // Only show if not already installed and not dismissed
   const dismissed = sessionStorage.getItem('pwa-dismissed')
   if (dismissed) return
 
@@ -37,9 +39,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
     if (deferredPrompt) {
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
-      if (outcome === 'accepted') {
-        console.log('PWA installed')
-      }
+      if (outcome === 'accepted') console.log('PWA installed')
       deferredPrompt = null
     }
   })

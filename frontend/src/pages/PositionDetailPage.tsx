@@ -30,7 +30,7 @@ export function PositionDetailPage() {
         ])
         setPosition(positionData)
         setHistory(historyData)
-        setScenarios(scenarioData ? [scenarioData] : [])
+        setScenarios(Array.isArray(scenarioData) ? scenarioData : scenarioData ? [scenarioData] : [])
         setError(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro inesperado.')
