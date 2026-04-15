@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: apex-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    autoDeploy: false
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: apex-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATA_PROVIDER
+        value: demo
+
+  - type: web
+    name: apex-terminal
+    runtime: docker
+    rootDir: frontend
+    dockerfilePath: ./Dockerfile
+    autoDeploy: false
+    plan: starter
+    envVars:
+      - key: BACKEND_UPSTREAM
+        value: http://apex-api:10000
+
+databases:
+  - name: apex-db
+    databaseName: apex
+    user: apex
+    plan: basic-256mb

@@ -1,0 +1,39 @@
+{
+  "name": "Apex Terminal",
+  "short_name": "Apex",
+  "description": "Investment Discovery & Portfolio Intelligence",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#04070d",
+  "theme_color": "#04070d",
+  "orientation": "portrait-primary",
+  "lang": "pt",
+  "categories": ["finance", "business"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Scanner",
+      "url": "/scanner",
+      "description": "Abrir scanner de oportunidades"
+    },
+    {
+      "name": "Carteira",
+      "url": "/portfolio",
+      "description": "Ver carteira"
+    }
+  ]
+}

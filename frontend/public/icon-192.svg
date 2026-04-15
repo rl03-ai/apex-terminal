@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="36" fill="#04070d"/>
+  <rect width="192" height="192" rx="36" fill="url(#g)"/>
+  <defs>
+    <radialGradient id="g" cx="30%" cy="20%" r="80%">
+      <stop offset="0%" stop-color="#ff9f1a" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#04070d" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <text x="96" y="130" font-family="Georgia,serif" font-size="110" font-weight="bold"
+    fill="#ff9f1a" text-anchor="middle" letter-spacing="-4">A</text>
+  <text x="96" y="172" font-family="Georgia,serif" font-size="18" font-weight="normal"
+    fill="#8ea0bb" text-anchor="middle" letter-spacing="6">APEX</text>
+</svg>

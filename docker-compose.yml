@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: apex
+      POSTGRES_USER: apex
+      POSTGRES_PASSWORD: apex
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql://apex:apex@db:5432/apex
+      SECRET_KEY: local-dev-secret
+      DATA_PROVIDER: demo
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8080
+    depends_on:
+      - db
+    ports:
+      - "8000:10000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    environment:
+      BACKEND_UPSTREAM: http://backend:10000
+    depends_on:
+      - backend
+    ports:
+      - "8080:10000"
+
+volumes:
+  postgres_data:

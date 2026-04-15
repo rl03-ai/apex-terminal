@@ -1,0 +1,165 @@
+import { useEffect, useMemo, useState } from 'react'
+import { fetchAlerts, fetchPortfolios, fetchPortfolioPositions, fetchTopOpportunities } from '../api/endpoints'
+import type { AlertItem, Portfolio, Position, ScannerResult } from '../types'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
+import { ScannerTable } from '../components/ScannerTable'
+import { ScoreBar } from '../components/ScoreBar'
+import { SectionCard } from '../components/SectionCard'
+import { StatCard } from '../components/StatCard'
+import { StatusPill } from '../components/StatusPill'
+
+export function DashboardPage() {
+  const [scannerRows, setScannerRows] = useState<ScannerResult[]>([])
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([])
+  const [positions, setPositions] = useState<Position[]>([])
+  const [alerts, setAlerts] = useState<AlertItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true)
+        const [scannerData, portfolioData, alertData] = await Promise.all([
+          fetchTopOpportunities(),
+          fetchPortfolios(),
+          fetchAlerts(),
+        ])
+        setScannerRows(scannerData)
+        setPortfolios(portfolioData)
+        setAlerts(alertData)
+
+        if (portfolioData.length > 0) {
+          const firstPortfolioPositions = await fetchPortfolioPositions(portfolioData[0].id)
+          setPositions(firstPortfolioPositions)
+        }
+        setError(null)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro inesperado.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void load()
+  }, [])
+
+  const stats = useMemo(() => {
+    const totalValue = positions.reduce((sum, item) => sum + (item.current_value || 0), 0)
+    const totalInvested = positions.reduce((sum, item) => sum + item.invested_amount, 0)
+    const totalPnL = totalValue - totalInvested
+    const totalPnLPct = totalInvested ? (totalPnL / totalInvested) * 100 : 0
+    const avgScore = scannerRows.length
+      ? scannerRows.reduce((sum, item) => sum + item.total_score, 0) / scannerRows.length
+      : 0
+
+    return {
+      topSignals: scannerRows.length,
+      portfolioCount: portfolios.length,
+      totalValue,
+      totalPnLPct,
+      avgScore,
+    }
+  }, [positions, portfolios.length, scannerRows])
+
+  if (loading) return <LoadingState />
+  if (error) return <ErrorState message={error} />
+
+  return (
+    <div className="page-stack">
+      <section className="hero-panel card">
+        <div>
+          <div className="hero-kicker">Apex overview</div>
+          <h1>Investment terminal</h1>
+          <p className="muted hero-copy">
+            Scanner estrutural, carteira acompanhada por tese e leitura de risco com foco em investimento spot.
+          </p>
+        </div>
+        <div className="hero-metrics">
+          <div className="hero-metric">
+            <span className="muted small">Average scanner score</span>
+            <strong>{stats.avgScore.toFixed(1)}</strong>
+            <ScoreBar value={stats.avgScore} />
+          </div>
+          <div className="hero-metric">
+            <span className="muted small">Portfolio return</span>
+            <strong>{stats.totalPnLPct.toFixed(2)}%</strong>
+            <ScoreBar value={Math.max(0, Math.min(100, 50 + stats.totalPnLPct))} />
+          </div>
+        </div>
+      </section>
+
+      <div className="stats-grid">
+        <StatCard label="Top signals" value={String(stats.topSignals)} hint="Candidatos atuais" />
+        <StatCard label="Carteiras" value={String(stats.portfolioCount)} hint="Ativas" />
+        <StatCard label="Valor atual" value={stats.totalValue.toFixed(2)} hint="Soma das posições" />
+        <StatCard label="Retorno total" value={`${stats.totalPnLPct.toFixed(2)}%`} hint="Não realizado" />
+      </div>
+
+      <div className="two-col-grid emphasis-grid">
+        <SectionCard title="Top opportunities">
+          <ScannerTable rows={scannerRows.slice(0, 8)} />
+        </SectionCard>
+
+        <SectionCard title="Opportunity tape">
+          <div className="signal-stack">
+            {scannerRows.slice(0, 6).map((row) => (
+              <div className="signal-card" key={row.ticker}>
+                <div className="list-item-row">
+                  <div>
+                    <div className="signal-ticker">{row.ticker}</div>
+                    <div className="muted small">{row.asset_name}</div>
+                  </div>
+                  <StatusPill text={row.total_score.toFixed(1)} tone={row.total_score >= 80 ? 'good' : row.total_score >= 65 ? 'warn' : 'bad'} />
+                </div>
+                <div className="muted small">{row.why_selected?.[0] || 'Sem detalhe.'}</div>
+                <ScoreBar value={row.priority_score} />
+              </div>
+            ))}
+            {!scannerRows.length ? <div className="muted">Sem sinais ativos.</div> : null}
+          </div>
+        </SectionCard>
+      </div>
+
+      <div className="two-col-grid">
+        <SectionCard title="Alertas recentes">
+          <div className="list-stack">
+            {alerts.slice(0, 6).map((alert) => (
+              <div className="list-item terminal-list-item" key={alert.id}>
+                <div className="list-item-row">
+                  <strong>{alert.title}</strong>
+                  <StatusPill text={alert.severity} tone={alert.severity === 'high' ? 'bad' : 'warn'} />
+                </div>
+                <div className="muted small">{alert.message}</div>
+              </div>
+            ))}
+            {!alerts.length ? <div className="muted">Sem alertas.</div> : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Resumo da carteira">
+          <div className="signal-stack">
+            {positions.slice(0, 6).map((position) => (
+              <div className="signal-card" key={position.id}>
+                <div className="list-item-row">
+                  <div>
+                    <div className="signal-ticker">{position.ticker}</div>
+                    <div className="muted small">{position.asset_name}</div>
+                  </div>
+                  <StatusPill
+                    text={position.pnl_pct !== undefined ? `${position.pnl_pct.toFixed(2)}%` : '—'}
+                    tone={position.pnl_pct && position.pnl_pct >= 0 ? 'good' : 'bad'}
+                  />
+                </div>
+                <div className="muted small">{position.thesis_status || 'sem estado'}</div>
+                <ScoreBar value={position.total_score || 0} />
+              </div>
+            ))}
+            {!positions.length ? <div className="muted">Sem posições.</div> : null}
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  )
+}
