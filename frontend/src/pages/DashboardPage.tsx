@@ -113,7 +113,7 @@ export function DashboardPage() {
                   </div>
                   <StatusPill text={row.total_score.toFixed(1)} tone={row.total_score >= 80 ? 'good' : row.total_score >= 65 ? 'warn' : 'bad'} />
                 </div>
-                <div className="muted small">{row.why_selected?.[0] || 'Sem detalhe.'}</div>
+                <div className="muted small">{String((Array.isArray(row.why_selected) ? row.why_selected[0] : Object.values(row.why_selected || {})[0]) || 'Sem detalhe.')}</div>
                 <ScoreBar value={row.priority_score} />
               </div>
             ))}

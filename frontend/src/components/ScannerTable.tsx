@@ -46,7 +46,7 @@ export function ScannerTable({ rows }: ScannerTableProps) {
               </td>
               <td>{row.state}</td>
               <td>{row.sector || '—'}</td>
-              <td>{row.why_selected?.slice(0, 2).join(' · ') || '—'}</td>
+              <td>{(Array.isArray(row.why_selected) ? row.why_selected : Object.values(row.why_selected || {})).slice(0, 2).join(' · ') || '—'}</td>
             </tr>
           ))}
         </tbody>
