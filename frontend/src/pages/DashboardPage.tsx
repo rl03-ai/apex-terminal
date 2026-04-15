@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchAlerts, fetchPortfolios, fetchPortfolioPositions, fetchTopOpportunities } from '../api/endpoints'
 import type { AlertItem, Portfolio, Position, ScannerResult } from '../types'
 import { ErrorState } from '../components/ErrorState'
@@ -10,6 +11,7 @@ import { StatCard } from '../components/StatCard'
 import { StatusPill } from '../components/StatusPill'
 
 export function DashboardPage() {
+  const navigate = useNavigate()
   const [scannerRows, setScannerRows] = useState<ScannerResult[]>([])
   const [portfolios, setPortfolios] = useState<Portfolio[]>([])
   const [positions, setPositions] = useState<Position[]>([])
@@ -26,7 +28,15 @@ export function DashboardPage() {
           fetchPortfolios(),
           fetchAlerts(),
         ])
-        setScannerRows(scannerData)
+        // Deduplicate by ticker — keep highest priority_score per ticker
+        const seen = new Map<string, typeof scannerData[0]>()
+        for (const row of scannerData) {
+          const existing = seen.get(row.ticker)
+          if (!existing || row.priority_score > existing.priority_score) {
+            seen.set(row.ticker, row)
+          }
+        }
+        setScannerRows(Array.from(seen.values()).sort((a,b) => b.priority_score - a.priority_score))
         setPortfolios(portfolioData)
         setAlerts(alertData)
 
@@ -105,7 +115,7 @@ export function DashboardPage() {
         <SectionCard title="Opportunity tape">
           <div className="signal-stack">
             {scannerRows.slice(0, 6).map((row) => (
-              <div className="signal-card" key={row.ticker}>
+              <div className="signal-card" key={row.ticker} onClick={() => navigate(`/asset/${row.ticker}`)} style={{cursor:'pointer'}}>
                 <div className="list-item-row">
                   <div>
                     <div className="signal-ticker">{row.ticker}</div>

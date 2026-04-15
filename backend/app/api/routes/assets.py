@@ -135,3 +135,50 @@ def get_asset_chart(ticker: str, db: Session = Depends(get_db)) -> list[PricePoi
         raise HTTPException(status_code=404, detail='Asset not found')
     rows = db.query(AssetPriceDaily).filter(AssetPriceDaily.asset_id == asset.id).order_by(AssetPriceDaily.date.asc()).limit(365).all()
     return [PricePoint(date=row.date, close=row.close) for row in rows]
+
+
+@router.get('/{ticker}/score')
+def get_asset_score_detail(ticker: str, db: Session = Depends(get_db)) -> dict:
+    """Combined endpoint: asset profile + latest score with full explanation."""
+    asset = db.query(Asset).filter(Asset.ticker == ticker.upper()).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail='Asset not found')
+    score = db.query(AssetScoreDaily).filter(
+        AssetScoreDaily.asset_id == asset.id
+    ).order_by(desc(AssetScoreDaily.date)).first()
+    return {
+        'ticker': asset.ticker,
+        'name': asset.name,
+        'sector': asset.sector,
+        'industry': asset.industry,
+        'market_cap': asset.market_cap,
+        'score': {
+            'total_score': score.total_score if score else None,
+            'growth_score': score.growth_score if score else None,
+            'quality_score': score.quality_score if score else None,
+            'valuation_score': score.valuation_score if score else None,
+            'market_score': score.market_score if score else None,
+            'narrative_score': score.narrative_score if score else None,
+            'risk_score': score.risk_score if score else None,
+            'state': score.state if score else None,
+            'score_percentile': score.score_percentile if score else None,
+            'score_regime': score.score_regime if score else None,
+            'score_trajectory': score.score_trajectory if score else None,
+            'explanation': score.explanation if score else {},
+        } if score else None,
+    }
+
+
+@router.get('/{ticker}/prices')
+def get_asset_prices(ticker: str, db: Session = Depends(get_db)) -> dict:
+    """Price history for charting."""
+    asset = db.query(Asset).filter(Asset.ticker == ticker.upper()).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail='Asset not found')
+    rows = db.query(AssetPriceDaily).filter(
+        AssetPriceDaily.asset_id == asset.id
+    ).order_by(AssetPriceDaily.date.asc()).limit(365).all()
+    return {
+        'ticker': asset.ticker,
+        'prices': [{'date': str(r.date), 'close': r.close} for r in rows]
+    }

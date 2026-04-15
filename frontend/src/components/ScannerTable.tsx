@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import type { ScannerResult } from '../types'
 import { EmptyState } from './EmptyState'
 import { ScoreBar } from './ScoreBar'
@@ -5,37 +6,49 @@ import { StatusPill } from './StatusPill'
 
 interface ScannerTableProps {
   rows: ScannerResult[]
+  compact?: boolean
 }
 
 function toneForScore(score: number): 'good' | 'warn' | 'bad' {
-  if (score >= 80) return 'good'
-  if (score >= 65) return 'warn'
+  if (score >= 70) return 'good'
+  if (score >= 55) return 'warn'
   return 'bad'
 }
 
-export function ScannerTable({ rows }: ScannerTableProps) {
-  if (!rows.length) {
-    return <EmptyState message="Sem resultados para mostrar." />
-  }
+function whyText(why: any): string {
+  if (!why) return '—'
+  if (Array.isArray(why)) return why.slice(0, 2).join(' · ') || '—'
+  const vals = Object.values(why as Record<string, string[]>).flat()
+  return vals.slice(0, 2).join(' · ') || '—'
+}
+
+export function ScannerTable({ rows, compact = false }: ScannerTableProps) {
+  const navigate = useNavigate()
+
+  if (!rows.length) return <EmptyState message="Sem resultados para mostrar." />
 
   return (
     <div className="table-wrapper terminal-table-wrapper">
       <table>
         <thead>
           <tr>
-            <th>Rank</th>
+            {!compact && <th>#</th>}
             <th>Ticker</th>
             <th>Empresa</th>
             <th>Score</th>
-            <th>Leitura</th>
-            <th>Setor</th>
-            <th>Motivo</th>
+            {!compact && <th>Estado</th>}
+            {!compact && <th>Setor</th>}
+            <th>Razão principal</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.scanner_type}-${row.ticker}`}>
-              <td>{row.rank}</td>
+          {rows.map((row, i) => (
+            <tr
+              key={`${row.scanner_type}-${row.ticker}-${i}`}
+              className="table-row-clickable"
+              onClick={() => navigate(`/asset/${row.ticker}`)}
+            >
+              {!compact && <td className="muted">{row.rank}</td>}
               <td className="strong table-ticker">{row.ticker}</td>
               <td>{row.asset_name}</td>
               <td>
@@ -44,9 +57,9 @@ export function ScannerTable({ rows }: ScannerTableProps) {
                   <ScoreBar value={row.total_score} />
                 </div>
               </td>
-              <td>{row.state}</td>
-              <td>{row.sector || '—'}</td>
-              <td>{(Array.isArray(row.why_selected) ? row.why_selected : Object.values(row.why_selected || {})).slice(0, 2).join(' · ') || '—'}</td>
+              {!compact && <td>{row.state}</td>}
+              {!compact && <td>{row.sector || '—'}</td>}
+              <td className="muted small">{whyText(row.why_selected)}</td>
             </tr>
           ))}
         </tbody>
