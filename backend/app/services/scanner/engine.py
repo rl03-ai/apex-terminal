@@ -51,8 +51,11 @@ def _passes_profile(score: AssetScoreDaily, profile: ScannerProfile) -> bool:
 
 
 def _catalyst_proximity_score(events: list[AssetEvent]) -> float:
-    now = datetime.utcnow()
-    upcoming = [e for e in events if now <= e.event_date <= now + timedelta(days=45)]
+    from datetime import timezone
+    now = datetime.now(tz=timezone.utc)
+    def _aware(dt):
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    upcoming = [e for e in events if now <= _aware(e.event_date) <= now + timedelta(days=45)]
     if not upcoming:
         return 35.0
     weighted = sum((e.importance_score or 50.0) for e in upcoming) / len(upcoming)
