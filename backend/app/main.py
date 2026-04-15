@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import alerts, assets, auth, backtest, catalyst, health, portfolios, positions, scanner, universe, xbrl
+from app.api.routes import alerts, assets, auth, backtest, catalyst, health, portfolios, positions, scanner, setup, universe, xbrl
 from app.core.config import get_settings
 from app.core.database import Base, engine
 
@@ -32,6 +32,7 @@ app.include_router(universe.router, prefix='/universe', tags=['universe'])
 app.include_router(backtest.router, prefix='/backtest', tags=['backtest'])
 app.include_router(catalyst.router, prefix='/catalyst', tags=['catalyst'])
 app.include_router(xbrl.router, prefix='/xbrl', tags=['xbrl'])
+app.include_router(setup.router, tags=['setup'])
 
 
 @app.on_event('startup')
