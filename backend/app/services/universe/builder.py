@@ -364,6 +364,82 @@ _SEED: list[str] = [
 # Wikipedia scrapers (no API key required)
 # ---------------------------------------------------------------------------
 
+
+# ═══════════════════════════════════════════════════════════════════════
+# GitHub-hosted JSON sources (no scraping, no rate limit)
+# ═══════════════════════════════════════════════════════════════════════
+
+def _fetch_github_json(url: str, description: str) -> list[str]:
+    """Fetch a JSON list of tickers from GitHub."""
+    try:
+        import urllib.request, json as _json
+        req = urllib.request.Request(url, headers={'User-Agent': 'apex-terminal/1.0'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = _json.loads(r.read().decode('utf-8'))
+
+        # Handle different formats
+        if isinstance(data, list):
+            if data and isinstance(data[0], str):
+                tickers = data
+            elif data and isinstance(data[0], dict):
+                # Try common field names
+                for field in ('Symbol', 'symbol', 'ticker', 'Ticker'):
+                    if field in data[0]:
+                        tickers = [row.get(field, '').strip().upper() for row in data]
+                        tickers = [t for t in tickers if t]
+                        break
+                else:
+                    tickers = []
+            else:
+                tickers = []
+        elif isinstance(data, dict):
+            # Sometimes wrapped in a key
+            for key in ('symbols', 'tickers', 'constituents', 'data'):
+                if key in data and isinstance(data[key], list):
+                    tickers = [str(t).strip().upper() for t in data[key]]
+                    break
+            else:
+                tickers = []
+        else:
+            tickers = []
+
+        # Clean and dedupe
+        tickers = list(dict.fromkeys(
+            t.replace('.', '-') for t in tickers
+            if t and '.' not in t[:3] and len(t) <= 6
+        ))
+        logger.info("%s: fetched %d tickers from GitHub", description, len(tickers))
+        return tickers
+    except Exception as exc:
+        logger.warning("%s fetch failed: %s", description, exc)
+        return []
+
+
+def _fetch_sp500_github() -> list[str]:
+    """S&P500 constituents maintained on GitHub."""
+    return _fetch_github_json(
+        "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.json",
+        "S&P 500 (GitHub)",
+    )
+
+
+def _fetch_nasdaq100_github() -> list[str]:
+    """NASDAQ-100 constituents from GitHub."""
+    return _fetch_github_json(
+        "https://raw.githubusercontent.com/fja05680/sp500/master/nasdaq100.json",
+        "NASDAQ-100 (GitHub)",
+    )
+
+
+def _fetch_russell1000_github() -> list[str]:
+    """Russell 1000 - large list from financial-datasets project on GitHub."""
+    # This list combines Russell 1000 equivalents maintained in various repos
+    return _fetch_github_json(
+        "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.txt",
+        "All US Stocks (GitHub)",
+    )
+
+
 def _fetch_sp500() -> list[str]:
     """Scrape S&P 500 constituents from Wikipedia."""
     try:
@@ -502,12 +578,22 @@ def build_universe(
     """
     collected: set[str] = set()
 
+    # Try GitHub sources first (no rate limit, no scraping)
     if include_sp500:
-        collected.update(_fetch_sp500())
+        sp500 = _fetch_sp500_github()
+        if not sp500:
+            sp500 = _fetch_sp500()  # Wikipedia fallback
+        collected.update(sp500)
     if include_nasdaq100:
-        collected.update(_fetch_nasdaq100())
+        nq = _fetch_nasdaq100_github()
+        if not nq:
+            nq = _fetch_nasdaq100()
+        collected.update(nq)
     if include_russell1000:
-        collected.update(_fetch_russell1000())
+        r1k = _fetch_russell1000_github()
+        if not r1k:
+            r1k = _fetch_russell1000()
+        collected.update(r1k)
     if include_nasdaq_ftp:
         collected.update(_fetch_nasdaq_listed())
     if include_other_ftp:

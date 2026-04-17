@@ -73,7 +73,12 @@ def ingest_ticker(db: Session, provider: MarketDataProvider, ticker: str, defaul
     events = 0
     try:
         from app.services.catalyst.aggregator import fetch_and_compute_catalyst
-        catalyst_events, catalyst_score = fetch_and_compute_catalyst(ticker)
+        catalyst_events, catalyst_score = fetch_and_compute_catalyst(
+            ticker,
+            sector=asset.sector,
+            industry=asset.industry,
+            market_cap=asset.market_cap,
+        )
         db.query(AssetEvent).filter(AssetEvent.asset_id == asset.id).delete()
         for row in catalyst_events:
             db.add(AssetEvent(asset_id=asset.id, **row))

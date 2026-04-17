@@ -183,23 +183,53 @@ def compute_full_catalyst(
 # Fetch + compute in one call (for the ingestion pipeline)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def fetch_and_compute_catalyst(ticker: str) -> tuple[list[dict[str, Any]], CatalystScore]:
+def fetch_and_compute_catalyst(
+    ticker: str,
+    sector: str | None = None,
+    industry: str | None = None,
+    market_cap: float | None = None,
+) -> tuple[list[dict[str, Any]], CatalystScore]:
     """
     Fetch all catalyst events and compute CatalystScore in one call.
+
+    Priority order for data sources:
+      1. Finnhub (if FINNHUB_API_KEY is set) — covers earnings, insider, news
+      2. yfinance / SEC EDGAR (existing) — fallback
 
     Returns (events_list, catalyst_score).
     events_list is ready for upsert into AssetEvent table.
     """
-    from app.services.catalyst.earnings import fetch_earnings_events
-    from app.services.catalyst.insider import fetch_insider_events
-    from app.services.catalyst.news import fetch_news_events
+    all_events: list[dict[str, Any]] = []
 
-    earnings_events = fetch_earnings_events(ticker)
-    insider_events = fetch_insider_events(ticker)
-    news_events = fetch_news_events(ticker)
+    # Try Finnhub first
+    try:
+        from app.services.catalyst.finnhub import fetch_all_catalyst_events, is_available
+        if is_available():
+            finnhub_events = fetch_all_catalyst_events(ticker)
+            all_events.extend(finnhub_events)
+            logger.debug("Finnhub: %d events for %s", len(finnhub_events), ticker)
+    except Exception as exc:
+        logger.warning("Finnhub fetch failed for %s: %s", ticker, exc)
 
-    all_events = earnings_events + insider_events + news_events
-    catalyst = compute_full_catalyst(ticker, all_events)
+    # Fallback to yfinance/SEC if Finnhub returned nothing
+    if not all_events:
+        try:
+            from app.services.catalyst.earnings import fetch_earnings_events
+            from app.services.catalyst.insider import fetch_insider_events
+            from app.services.catalyst.news import fetch_news_events
+
+            earnings_events = fetch_earnings_events(ticker)
+            insider_events = fetch_insider_events(ticker)
+            news_events = fetch_news_events(ticker)
+            all_events = earnings_events + insider_events + news_events
+            logger.debug("Fallback sources: %d events for %s", len(all_events), ticker)
+        except Exception as exc:
+            logger.warning("Fallback catalyst fetch failed for %s: %s", ticker, exc)
+
+    catalyst = compute_full_catalyst(
+        ticker, all_events,
+        sector=sector, industry=industry, market_cap=market_cap,
+    )
 
     return all_events, catalyst
 
