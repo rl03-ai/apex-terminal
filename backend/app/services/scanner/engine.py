@@ -21,11 +21,11 @@ class ScannerProfile:
 
 
 SCANNER_PROFILES = {
-    'repricing': ScannerProfile('repricing', min_total=70, min_growth=65, min_market=55, max_risk=65),
-    'early_growth': ScannerProfile('early_growth', min_total=64, min_growth=70, min_quality=45),
-    'quality_compounder': ScannerProfile('quality_compounder', min_total=68, min_quality=75, max_risk=55),
-    'narrative': ScannerProfile('narrative', min_total=60, min_narrative=72, min_growth=50),
-    'speculative': ScannerProfile('speculative', min_total=55, min_narrative=60, max_risk=85),
+    'repricing': ScannerProfile('repricing', min_total=52, min_growth=48, min_market=42, max_risk=75),
+    'early_growth': ScannerProfile('early_growth', min_total=50, min_growth=52, min_quality=38),
+    'quality_compounder': ScannerProfile('quality_compounder', min_total=52, min_quality=55, max_risk=70),
+    'narrative': ScannerProfile('narrative', min_total=48, min_narrative=50, min_growth=40),
+    'speculative': ScannerProfile('speculative', min_total=44, min_narrative=44, max_risk=90),
 }
 
 

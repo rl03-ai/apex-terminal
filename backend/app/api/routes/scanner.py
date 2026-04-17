@@ -111,14 +111,21 @@ def get_scanner_results(
 
 
 @router.get('/top-opportunities', response_model=list[ScannerResultOut])
-def top_opportunities(db: Session = Depends(get_db)) -> list[dict]:
+def top_opportunities(limit: int = 20, db: Session = Depends(get_db)) -> list[dict]:
+    # Fetch more rows than needed, then deduplicate by ticker
     rows = (
         db.query(ScannerResult)
         .order_by(desc(ScannerResult.priority_score))
-        .limit(20)
+        .limit(200)
         .all()
     )
-    return _enrich(rows, db)
+    # Keep highest-scoring entry per ticker
+    seen: dict = {}
+    for row in rows:
+        if row.asset_id not in seen or row.priority_score > seen[row.asset_id].priority_score:
+            seen[row.asset_id] = row
+    deduped = sorted(seen.values(), key=lambda r: r.priority_score, reverse=True)[:limit]
+    return _enrich(deduped, db)
 
 
 @router.get('/emerging', response_model=list[ScannerResultOut])
