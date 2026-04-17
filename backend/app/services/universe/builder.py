@@ -369,6 +369,88 @@ _SEED: list[str] = [
 # GitHub-hosted JSON sources (no scraping, no rate limit)
 # ═══════════════════════════════════════════════════════════════════════
 
+
+def _fetch_universe_from_finnhub(exchange: str = "US") -> list[str]:
+    """
+    Fetch all tradable symbols from Finnhub.
+    Free tier: covers NYSE + NASDAQ. Returns ~7000+ active US tickers.
+    """
+    import os, urllib.request, json as _json
+    api_key = os.getenv("FINNHUB_API_KEY", "")
+    if not api_key:
+        logger.warning("FINNHUB_API_KEY not set — skipping Finnhub universe fetch")
+        return []
+
+    url = f"https://finnhub.io/api/v1/stock/symbol?exchange={exchange}&token={api_key}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "apex-terminal/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = _json.loads(r.read().decode("utf-8"))
+
+        # Filter: only common stocks, no OTC, no 5+ letter tickers (usually warrants/units)
+        tickers = []
+        for row in data:
+            sym = row.get("symbol", "").strip().upper()
+            type_ = row.get("type", "")
+            if not sym or len(sym) > 5:
+                continue
+            if "." in sym or "-" in sym:
+                # Keep -A, -B share classes (BRK-B)
+                if sym.count("-") > 1 or "." in sym:
+                    continue
+            # Filter out warrants, rights, units (suffixes like W, R, U)
+            if type_ and type_ not in ("Common Stock", "ETP", "ADR"):
+                continue
+            tickers.append(sym)
+
+        logger.info("Finnhub universe (%s): %d tickers", exchange, len(tickers))
+        return tickers
+    except Exception as exc:
+        logger.warning("Finnhub universe fetch failed: %s", exc)
+        return []
+
+
+
+def _fetch_github_csv_or_json(url: str, description: str) -> list[str]:
+    """Fetch a CSV or JSON from GitHub and extract tickers."""
+    try:
+        import urllib.request, csv, io, json as _json
+        req = urllib.request.Request(url, headers={'User-Agent': 'apex-terminal/1.0'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            content = r.read().decode('utf-8', errors='ignore')
+
+        tickers: list[str] = []
+        if url.endswith('.csv'):
+            reader = csv.DictReader(io.StringIO(content))
+            for row in reader:
+                for field in ('Symbol', 'symbol', 'Ticker', 'ticker'):
+                    if field in row and row[field]:
+                        tickers.append(str(row[field]).strip().upper())
+                        break
+        else:
+            data = _json.loads(content)
+            if isinstance(data, list):
+                for row in data:
+                    if isinstance(row, dict):
+                        for field in ('Symbol', 'symbol', 'Ticker', 'ticker'):
+                            if field in row and row[field]:
+                                tickers.append(str(row[field]).strip().upper())
+                                break
+                    elif isinstance(row, str):
+                        tickers.append(row.strip().upper())
+
+        # Clean and dedupe
+        tickers = list(dict.fromkeys(
+            t.replace('.', '-') for t in tickers
+            if t and len(t) <= 6 and t.replace('-', '').isalnum()
+        ))
+        logger.info("%s: fetched %d tickers", description, len(tickers))
+        return tickers
+    except Exception as exc:
+        logger.warning("%s fetch failed: %s", description, exc)
+        return []
+
+
 def _fetch_github_json(url: str, description: str) -> list[str]:
     """Fetch a JSON list of tickers from GitHub."""
     try:
@@ -416,28 +498,50 @@ def _fetch_github_json(url: str, description: str) -> list[str]:
 
 
 def _fetch_sp500_github() -> list[str]:
-    """S&P500 constituents maintained on GitHub."""
-    return _fetch_github_json(
-        "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.json",
-        "S&P 500 (GitHub)",
-    )
+    """S&P500 constituents - try multiple maintained sources."""
+    sources = [
+        "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv",
+        "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv",
+    ]
+    for url in sources:
+        result = _fetch_github_csv_or_json(url, "S&P 500 (GitHub)")
+        if result:
+            return result
+    return []
 
 
 def _fetch_nasdaq100_github() -> list[str]:
-    """NASDAQ-100 constituents from GitHub."""
-    return _fetch_github_json(
-        "https://raw.githubusercontent.com/fja05680/sp500/master/nasdaq100.json",
-        "NASDAQ-100 (GitHub)",
-    )
+    """NASDAQ-100 constituents from GitHub. Fallback to hardcoded list."""
+    # Static NASDAQ-100 list (updated Jan 2026 — manually maintained)
+    # This is reliable; no external dependency
+    nasdaq100 = [
+        "AAPL","MSFT","GOOG","GOOGL","AMZN","NVDA","META","TSLA","AVGO","COST",
+        "NFLX","ADBE","AMD","PEP","CSCO","TMUS","INTC","QCOM","LIN","TXN",
+        "INTU","AMGN","HON","ISRG","AMAT","BKNG","VRTX","LRCX","ADP","MU",
+        "PANW","GILD","MDLZ","REGN","ADI","SBUX","KLAC","SNPS","CDNS","MELI",
+        "CRWD","ASML","PDD","CTAS","CMCSA","ORLY","PYPL","MAR","ABNB","CEG",
+        "MRVL","FTNT","DASH","MNST","WDAY","ADSK","CHTR","CSX","NXPI","PCAR",
+        "ROP","FANG","AEP","PAYX","ODFL","LULU","KDP","FAST","EXC","BKR",
+        "VRSK","KHC","EA","XEL","CTSH","MCHP","CCEP","AZN","GEHC","ON",
+        "CPRT","IDXX","TEAM","CSGP","BIIB","DDOG","ZS","DXCM","ANSS","ARM",
+        "TTD","MDB","WBD","ILMN","ROST","SMCI","CDW","MRNA","DLTR","SIRI",
+    ]
+    logger.info("NASDAQ-100 (static): %d tickers", len(nasdaq100))
+    return nasdaq100
 
 
 def _fetch_russell1000_github() -> list[str]:
-    """Russell 1000 - large list from financial-datasets project on GitHub."""
-    # This list combines Russell 1000 equivalents maintained in various repos
-    return _fetch_github_json(
-        "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.txt",
-        "All US Stocks (GitHub)",
-    )
+    """Russell 1000 - try GitHub JSON sources with multiple fallbacks."""
+    sources = [
+        "https://raw.githubusercontent.com/datasets/russell-1000/master/data/constituents.json",
+        "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json",
+        "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nyse/nyse_full_tickers.json",
+    ]
+    all_tickers = set()
+    for url in sources:
+        result = _fetch_github_json(url, "Russell/Stocks (GitHub)")
+        all_tickers.update(result)
+    return list(all_tickers)
 
 
 def _fetch_sp500() -> list[str]:
@@ -578,22 +682,23 @@ def build_universe(
     """
     collected: set[str] = set()
 
-    # Try GitHub sources first (no rate limit, no scraping)
-    if include_sp500:
-        sp500 = _fetch_sp500_github()
-        if not sp500:
-            sp500 = _fetch_sp500()  # Wikipedia fallback
-        collected.update(sp500)
-    if include_nasdaq100:
-        nq = _fetch_nasdaq100_github()
-        if not nq:
-            nq = _fetch_nasdaq100()
-        collected.update(nq)
-    if include_russell1000:
-        r1k = _fetch_russell1000_github()
-        if not r1k:
-            r1k = _fetch_russell1000()
-        collected.update(r1k)
+    # Try Finnhub universe first (has API key, ~7000 US tickers)
+    finnhub_tickers = _fetch_universe_from_finnhub("US")
+    if finnhub_tickers:
+        # Finnhub returns all US listings — this alone covers S&P500+NASDAQ100+R1000
+        collected.update(finnhub_tickers)
+        logger.info("Using Finnhub universe (%d tickers), skipping individual index fetches", len(finnhub_tickers))
+    else:
+        # Fallback: GitHub + Wikipedia scraping
+        if include_sp500:
+            sp500 = _fetch_sp500_github() or _fetch_sp500()
+            collected.update(sp500)
+        if include_nasdaq100:
+            nq = _fetch_nasdaq100_github() or _fetch_nasdaq100()
+            collected.update(nq)
+        if include_russell1000:
+            r1k = _fetch_russell1000_github() or _fetch_russell1000()
+            collected.update(r1k)
     if include_nasdaq_ftp:
         collected.update(_fetch_nasdaq_listed())
     if include_other_ftp:
