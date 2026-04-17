@@ -156,11 +156,11 @@ export function AssetDetailPage() {
   const score = data.score
   const stateColor = STATE_COLORS[score?.state || 'dormant'] || '#8ea0bb'
   const mcap = data.market_cap
-  const mcapStr = mcap
+  const mcapStr = mcap != null
     ? mcap >= 1e12 ? `$${(mcap/1e12).toFixed(1)}T`
     : mcap >= 1e9  ? `$${(mcap/1e9).toFixed(1)}B`
     : `$${(mcap/1e6).toFixed(0)}M`
-    : '—'
+    : null
 
   const scoreFields = ['growth_score','quality_score','valuation_score','market_score','narrative_score'] as const
   const explanation = score?.explanation || {}
@@ -177,7 +177,7 @@ export function AssetDetailPage() {
           <div className="asset-meta">
             {data.sector && <span className="meta-chip">{data.sector}</span>}
             {data.industry && <span className="meta-chip">{data.industry}</span>}
-            {mcap !== '—' && <span className="meta-chip">{mcapStr}</span>}
+            {mcapStr && <span className="meta-chip">{mcapStr}</span>}
           </div>
         </div>
         <div className="asset-score-big">

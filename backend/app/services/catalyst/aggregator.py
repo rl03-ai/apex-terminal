@@ -64,6 +64,8 @@ class CatalystScore:
 # Weights
 # ─────────────────────────────────────────────────────────────────────────────
 
+from app.services.catalyst.profiles import CatalystProfile, get_catalyst_profile, CATALYST_PROFILES
+
 _DEFAULT_WEIGHTS = {
     'earnings': 0.45,
     'insider': 0.30,
@@ -75,19 +77,23 @@ def _compute_weighted_score(
     earnings: dict | None,
     insider: dict | None,
     news: dict | None,
+    profile: CatalystProfile | None = None,
 ) -> tuple[float, str]:
     """
-    Compute weighted average score and dominant catalyst type.
+    Compute weighted average score using sector-specific profile weights.
     Components with no data are excluded and weights are renormalised.
     """
+    if profile is None:
+        profile = CATALYST_PROFILES['default']
+
     available: dict[str, tuple[float, float]] = {}  # name → (score, weight)
 
     if earnings and earnings.get('direction') != 'neutral':
-        available['earnings'] = (earnings['score'], _DEFAULT_WEIGHTS['earnings'])
+        available['earnings'] = (earnings['score'], profile.w_earnings)
     if insider and insider.get('signal') != 'neutral':
-        available['insider'] = (insider['score'], _DEFAULT_WEIGHTS['insider'])
+        available['insider'] = (insider['score'], profile.w_insider)
     if news and news.get('article_count', 0) > 0:
-        available['news'] = (news['score'], _DEFAULT_WEIGHTS['news'])
+        available['news'] = (news['score'], profile.w_news)
 
     if not available:
         return 50.0, 'none'
@@ -110,6 +116,9 @@ def compute_full_catalyst(
     events: list[dict[str, Any]],
     *,
     narrative_filter_threshold: float = 60.0,
+    sector: str | None = None,
+    industry: str | None = None,
+    market_cap: float | None = None,
 ) -> CatalystScore:
     """
     Compute the CatalystScore for a ticker from its event list.
@@ -119,15 +128,23 @@ def compute_full_catalyst(
     ticker                     : asset ticker (for logging)
     events                     : combined list of AssetEvent-compatible dicts
     narrative_filter_threshold : min score to qualify as entry catalyst
+    sector                     : yfinance sector string (for profile selection)
+    industry                   : yfinance industry string (for profile selection)
+    market_cap                 : market cap in dollars (for size-based routing)
     """
-    earnings_result = compute_earnings_catalyst_score(events)
-    insider_result = compute_insider_catalyst_score(events)
-    news_result = compute_news_catalyst_score(events)
+    # Select sector-specific catalyst profile
+    profile = get_catalyst_profile(sector, industry, market_cap, ticker)
+    logger.debug("Catalyst profile for %s (%s/%s): %s", ticker, sector, industry, profile.name)
+
+    earnings_result = compute_earnings_catalyst_score(events, profile=profile)
+    insider_result = compute_insider_catalyst_score(events, profile=profile)
+    news_result = compute_news_catalyst_score(events, profile=profile)
 
     score, dominant = _compute_weighted_score(
         earnings_result if earnings_result.get('direction') != 'neutral' else None,
         insider_result if insider_result.get('signal') != 'neutral' else None,
         news_result if news_result.get('article_count', 0) > 0 else None,
+        profile=profile,
     )
 
     # Build description from dominant catalyst
@@ -139,7 +156,8 @@ def compute_full_catalyst(
     if news_result.get('description'):
         descriptions.append(f"[news] {news_result['description']}")
 
-    description = ' | '.join(descriptions[:2]) or 'No catalyst data.'
+    profile_note = f'[{profile.name}]'
+    description = profile_note + ' ' + (' | '.join(descriptions[:2]) or 'No catalyst data.')
     qualifies = score >= narrative_filter_threshold
 
     logger.debug(

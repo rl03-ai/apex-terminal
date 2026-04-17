@@ -334,7 +334,7 @@ def fetch_insider_events(ticker: str, days: int = 90, max_filings: int = 10) -> 
     return events
 
 
-def compute_insider_catalyst_score(events: list[dict[str, Any]]) -> dict[str, Any]:
+def compute_insider_catalyst_score(events: list[dict], profile=None) -> dict:
     """Aggregate insider events into a single catalyst score (0-100)."""
     insider_events = [e for e in events if e.get('event_type') in ('insider_buy', 'insider_sell')]
     if not insider_events:

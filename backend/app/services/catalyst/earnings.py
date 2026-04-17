@@ -231,7 +231,7 @@ def fetch_earnings_events(ticker: str) -> list[dict[str, Any]]:
     return events
 
 
-def compute_earnings_catalyst_score(events: list[dict[str, Any]]) -> dict[str, Any]:
+def compute_earnings_catalyst_score(events: list[dict], profile=None) -> dict:
     """
     Aggregate earnings events into a single catalyst score.
 

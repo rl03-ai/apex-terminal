@@ -554,7 +554,12 @@ def compute_narrative_score(
             }
             for e in events
         ]
-        cat = compute_full_catalyst(asset.ticker, event_dicts)
+        cat = compute_full_catalyst(
+                asset.ticker, event_dicts,
+                sector=getattr(asset, 'sector', None),
+                industry=getattr(asset, 'industry', None),
+                market_cap=getattr(asset, 'market_cap', None),
+            )
         catalyst_composite = cat.score
         if cat.catalyst_type != "none":
             reasons.append(
