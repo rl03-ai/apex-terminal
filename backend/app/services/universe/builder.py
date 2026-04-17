@@ -698,6 +698,9 @@ def build_universe(
             collected.update(nq)
         if include_russell1000:
             r1k = _fetch_russell1000_github() or _fetch_russell1000()
+            # Russell fallback may return ALL US stocks (~20k) - cap it
+            if len(r1k) > 2000:
+                r1k = [t for t in r1k if 1 <= len(t.replace('-','')) <= 5][:1500]
             collected.update(r1k)
     if include_nasdaq_ftp:
         collected.update(_fetch_nasdaq_listed())
