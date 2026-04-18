@@ -683,7 +683,7 @@ def build_universe(
     collected: set[str] = set()
 
     # Try Finnhub universe first (has API key, ~7000 US tickers)
-    finnhub_tickers = _fetch_universe_from_finnhub("US")
+    finnhub_tickers = []  # disabled: returns ~7000 US tickers (too many for rate limits)
     if finnhub_tickers:
         # Finnhub returns all US listings — this alone covers S&P500+NASDAQ100+R1000
         collected.update(finnhub_tickers)
