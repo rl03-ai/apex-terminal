@@ -46,6 +46,58 @@ def _job_refresh_existing() -> None:
         logger.exception("daily_refresh FAILED: %s", exc)
 
 
+
+
+def _job_expand_universe() -> None:
+    """
+    Gradually expand the universe by ingesting up to N new tickers per day.
+
+    Strategy:
+      - Build full universe from GitHub sources
+      - Find tickers NOT yet in DB
+      - Ingest up to DAILY_EXPANSION_BATCH (default 500) per run
+      - Respects yfinance rate limits with 1s delay between tickers
+
+    After ~14 daily runs, the full universe is covered.
+    """
+    try:
+        from app.services.universe.builder import build_universe
+        from app.services.ingestion.bulk import run_bulk_ingest
+        from app.core.database import SessionLocal
+        from app.models.asset import Asset
+
+        batch_size = int(os.getenv("DAILY_EXPANSION_BATCH", "500"))
+
+        # Build full universe (cached GitHub lists)
+        full_universe = build_universe(include_russell1000=True)
+
+        # Find what's missing
+        db = SessionLocal()
+        try:
+            existing = {a.ticker for a in db.query(Asset.ticker).all()}
+        finally:
+            db.close()
+
+        missing = [t for t in full_universe if t not in existing]
+
+        if not missing:
+            logger.info("daily_expand: universe complete (%d tickers in DB)", len(existing))
+            return
+
+        batch = missing[:batch_size]
+        logger.info(
+            "daily_expand: %d tickers missing, ingesting batch of %d",
+            len(missing), len(batch),
+        )
+
+        workers = int(os.getenv("EXPAND_WORKERS", "2"))
+        delay = float(os.getenv("EXPAND_DELAY", "0.8"))
+        result = run_bulk_ingest(tickers=batch, workers=workers, inter_ticker_delay=delay)
+        logger.info("daily_expand done — %s", result)
+    except Exception as exc:
+        logger.exception("daily_expand FAILED: %s", exc)
+
+
 def _job_scoring() -> None:
     try:
         from app.jobs.daily_scoring import run as run_scoring
@@ -107,6 +159,18 @@ def start_scheduler() -> BackgroundScheduler:
     scheduler = BackgroundScheduler(timezone=tz)
 
     # 23:00 — refresh all existing tickers with fresh yfinance data
+    scheduler.add_job(
+        _job_expand_universe,
+        CronTrigger(
+            hour=int(os.getenv("SCHEDULER_EXPAND_HOUR", "22")),
+            minute=0,
+            timezone=tz,
+        ),
+        id="daily_expand",
+        name="Gradually expand universe (500 new tickers per day)",
+        replace_existing=True,
+    )
+
     scheduler.add_job(
         _job_refresh_existing,
         CronTrigger(hour=ingest_hour, minute=0, timezone=tz),
