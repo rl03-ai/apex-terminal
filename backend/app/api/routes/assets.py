@@ -182,3 +182,24 @@ def get_asset_prices(ticker: str, db: Session = Depends(get_db)) -> dict:
         'ticker': asset.ticker,
         'prices': [{'date': str(r.date), 'close': r.close} for r in rows]
     }
+
+
+@router.get('/{ticker}/trend', summary='Equity trend regime + entry timing')
+def get_asset_trend(ticker: str, db: Session = Depends(get_db)) -> dict:
+    """Run TrendChange detector on this asset's price history."""
+    from app.services.technical.equity_trend import analyse_from_db
+    asset = db.query(Asset).filter(Asset.ticker == ticker.upper()).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail='Asset not found')
+
+    trend = analyse_from_db(asset.id, db)
+    return {
+        'ticker': asset.ticker,
+        'regime': trend.regime,
+        'entry_signal': trend.entry_signal,
+        'score_daily': trend.score_daily,
+        'score_weekly': trend.score_weekly,
+        'confidence': trend.confidence,
+        'reasons': trend.reasons,
+        'market_score_boost': trend.market_score_boost,
+    }

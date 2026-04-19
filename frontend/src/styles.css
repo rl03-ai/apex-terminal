@@ -967,3 +967,55 @@ th {
   .asset-score-big { text-align: left; }
   .asset-score-number { font-size: 2.2rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ENTRY TIMING & REGIME (TrendChange)
+═══════════════════════════════════════════════════════════════════ */
+
+.trend-display { display: grid; gap: 1rem; }
+.trend-main {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.trend-regime-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+.regime-pill, .entry-pill {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.regime-strong-uptrend { color: #22c55e; background: rgba(34,197,94,0.12); }
+.regime-uptrend        { color: #4ade80; background: rgba(74,222,128,0.10); }
+.regime-topping        { color: #fbbf24; background: rgba(251,191,36,0.10); }
+.regime-ranging        { color: #8ea0bb; background: rgba(142,160,187,0.08); }
+.regime-basing         { color: #fb923c; background: rgba(251,146,60,0.10); }
+.regime-downtrend      { color: #f87171; background: rgba(248,113,113,0.12); }
+.regime-unknown        { color: #8ea0bb; background: rgba(142,160,187,0.05); }
+
+.entry-strong-buy      { color: #22c55e; background: rgba(34,197,94,0.18); }
+.entry-buy             { color: #4ade80; background: rgba(74,222,128,0.12); }
+.entry-hold            { color: #fbbf24; background: rgba(251,191,36,0.10); }
+.entry-caution         { color: #fb923c; background: rgba(251,146,60,0.12); }
+.entry-avoid           { color: #f87171; background: rgba(248,113,113,0.14); }
+
+.trend-scores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.trend-label { color: #8ea0bb; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.trend-value { font-size: 1.4rem; font-weight: 800; margin-top: 0.2rem; }
+.trend-reasons { display: grid; gap: 0.35rem; }
+.trend-reason  { color: #c7d3e8; font-size: 0.86rem; }
+
+@media (max-width: 768px) {
+  .trend-scores { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+  .trend-value  { font-size: 1.1rem; }
+}

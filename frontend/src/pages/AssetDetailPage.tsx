@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 
+
+interface TrendData {
+  ticker: string
+  regime: string
+  entry_signal: string
+  score_daily: number
+  score_weekly: number
+  confidence: number
+  reasons: string[]
+  market_score_boost: number
+}
+
 interface AssetDetail {
   ticker: string
   name: string
@@ -113,6 +125,7 @@ export function AssetDetailPage() {
   const { ticker } = useParams<{ ticker: string }>()
   const navigate = useNavigate()
   const [data, setData] = useState<AssetDetail | null>(null)
+  const [trend, setTrend] = useState<TrendData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -122,7 +135,9 @@ export function AssetDetailPage() {
     Promise.all([
       api.get<any>(`/assets/${ticker}/score`).catch(() => null),
       api.get<any>(`/assets/${ticker}/prices`).catch(() => null),
-    ]).then(([scoreData, priceData]) => {
+      api.get<TrendData>(`/assets/${ticker}/trend`).catch(() => null),
+    ]).then(([scoreData, priceData, trendData]) => {
+      setTrend(trendData)
       setData({
         ticker: ticker.toUpperCase(),
         name: scoreData?.name || ticker,
@@ -239,6 +254,49 @@ export function AssetDetailPage() {
                 </div>
               ) : null
             ))}
+          </div>
+        </div>
+      )}
+
+
+      {/* Trend / Entry Timing */}
+      {trend && trend.regime !== 'UNKNOWN' && (
+        <div className="card">
+          <div className="section-header"><h2>Entry Timing & Regime</h2></div>
+          <div className="trend-display">
+            <div className="trend-main">
+              <div className="trend-regime-row">
+                <span className={`regime-pill regime-${trend.regime.toLowerCase().replace('_','-')}`}>
+                  {trend.regime.replace('_', ' ')}
+                </span>
+                <span className={`entry-pill entry-${trend.entry_signal.toLowerCase().replace('_','-')}`}>
+                  {trend.entry_signal.replace('_', ' ')}
+                </span>
+              </div>
+              <div className="trend-scores">
+                <div>
+                  <div className="trend-label">Daily Score</div>
+                  <div className="trend-value" style={{color: trend.score_daily >= 0 ? '#22c55e' : '#f87171'}}>
+                    {trend.score_daily >= 0 ? '+' : ''}{trend.score_daily.toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <div className="trend-label">Weekly Score</div>
+                  <div className="trend-value" style={{color: trend.score_weekly >= 0 ? '#22c55e' : '#f87171'}}>
+                    {trend.score_weekly >= 0 ? '+' : ''}{trend.score_weekly.toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <div className="trend-label">Confidence</div>
+                  <div className="trend-value">{(trend.confidence * 100).toFixed(0)}%</div>
+                </div>
+              </div>
+            </div>
+            <div className="trend-reasons">
+              {trend.reasons.map((r, i) => (
+                <div key={i} className="trend-reason">• {r}</div>
+              ))}
+            </div>
           </div>
         </div>
       )}
