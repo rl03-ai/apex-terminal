@@ -3,7 +3,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import alerts, assets, auth, backtest, catalyst, health, portfolios, positions, scanner, scanner_config, setup, universe, xbrl
+from app.api.routes import alerts, assets, auth, backtest, catalyst, health, portfolios, positions, scanner, setup, universe, xbrl
+from app.api.routes import scanner_config
 from app.core.config import get_settings
 from app.core.database import Base, engine
 
