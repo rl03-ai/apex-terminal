@@ -1019,3 +1019,187 @@ th {
   .trend-scores { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
   .trend-value  { font-size: 1.1rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODAL (Add Position)
+═══════════════════════════════════════════════════════════════════ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal-content {
+  background: linear-gradient(135deg, #0a0e15 0%, #111823 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.2s ease-out;
+}
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #eef3fb;
+}
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #8ea0bb;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.modal-close:hover { color: #eef3fb; background: rgba(255,255,255,0.05); }
+
+.modal-body {
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  gap: 1.1rem;
+}
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* ── Form fields ────────────────────────────────────────────────── */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.form-field label {
+  color: #8ea0bb;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.form-field input,
+.form-field textarea,
+.form-field select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #eef3fb;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.12s;
+}
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: #ff9f1a;
+}
+.form-field textarea { resize: vertical; min-height: 60px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+.form-error {
+  color: #f87171;
+  font-size: 0.86rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(248,113,113,0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(248,113,113,0.25);
+}
+
+.invested-preview {
+  padding: 0.75rem 1rem;
+  background: rgba(255,159,26,0.08);
+  border: 1px solid rgba(255,159,26,0.25);
+  border-radius: 10px;
+  color: #c7d3e8;
+}
+.invested-preview strong { color: #ff9f1a; font-size: 1.1rem; }
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn-primary, .btn-secondary {
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s, transform 0.12s;
+  border: none;
+}
+.btn-primary {
+  background: #ff9f1a;
+  color: #04070d;
+}
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+  background: transparent;
+  color: #c7d3e8;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.btn-secondary:hover { border-color: rgba(255,255,255,0.3); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid rgba(248,113,113,0.25);
+  color: #f87171;
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.btn-delete:hover { background: rgba(248,113,113,0.1); }
+
+/* ── Position table ──────────────────────────────────────────── */
+.position-table { width: 100%; }
+.position-table th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8ea0bb;
+}
+
+.empty-state-portfolio {
+  padding: 2rem;
+  text-align: center;
+  display: grid;
+  gap: 1rem;
+  place-items: center;
+}
+
+@media (max-width: 768px) {
+  .modal-content { max-width: 100%; }
+  .form-row { grid-template-columns: 1fr; }
+  .position-table { font-size: 0.8rem; }
+  .position-table th, .position-table td { padding: 0.5rem 0.35rem; }
+}
