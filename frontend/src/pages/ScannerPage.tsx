@@ -10,15 +10,15 @@ import { SectionCard } from '../components/SectionCard'
 import type { ScannerResult, ScannerType } from '../types'
 
 const scannerOptions: Array<{ value: ScannerType; label: string; description: string }> = [
-  { value: 'structural_growth', label: 'Structural Growth', description: 'Crescimento consistente, margens e tendência de médio prazo.' },
-  { value: 'repricing', label: 'Repricing', description: 'Melhoria operacional + reconhecimento gradual do mercado.' },
-  { value: 'quality_compounders', label: 'Quality Compounders', description: 'Qualidade, consistência e menor ruído.' },
-  { value: 'narrative_plays', label: 'Narrative Plays', description: 'Narrativa forte com catalisadores relevantes.' },
-  { value: 'speculative_asymmetry', label: 'Speculative Asymmetry', description: 'Upside alto, risco maior e sizing controlado.' },
+  { value: 'repricing',          label: 'Repricing',           description: 'Melhoria operacional + reconhecimento gradual do mercado.' },
+  { value: 'early_growth',       label: 'Early Growth',        description: 'Crescimento em fase inicial com qualidade em formação.' },
+  { value: 'quality_compounder', label: 'Quality Compounder',  description: 'Qualidade, consistência e menor ruído.' },
+  { value: 'narrative',          label: 'Narrative',           description: 'Narrativa forte com catalisadores relevantes.' },
+  { value: 'speculative',        label: 'Speculative',         description: 'Upside alto, risco maior e sizing controlado.' },
 ]
 
 export function ScannerPage() {
-  const [scannerType, setScannerType] = useState<ScannerType>('structural_growth')
+  const [scannerType, setScannerType] = useState<ScannerType>('repricing')
   const [rows, setRows] = useState<ScannerResult[]>([])
   const [sectors, setSectors] = useState<string[]>([])
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)

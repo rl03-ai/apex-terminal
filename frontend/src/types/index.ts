@@ -1,9 +1,9 @@
 export type ScannerType =
-  | 'structural_growth'
   | 'repricing'
-  | 'quality_compounders'
-  | 'narrative_plays'
-  | 'speculative_asymmetry'
+  | 'early_growth'
+  | 'quality_compounder'
+  | 'narrative'
+  | 'speculative'
 
 export interface ScannerResult {
   ticker: string
