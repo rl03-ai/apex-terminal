@@ -109,7 +109,7 @@ export function DashboardPage() {
 
       <div className="two-col-grid emphasis-grid">
         <SectionCard title="Top opportunities">
-          <ScannerTable rows={scannerRows.slice(0, 8)} />
+          <ScannerTable rows={scannerRows.slice(0, 15)} />
         </SectionCard>
 
         <SectionCard title="Opportunity tape">

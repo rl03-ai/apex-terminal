@@ -9,7 +9,7 @@ import type {
   ScannerType,
 } from '../types'
 
-export async function fetchScannerResults(scannerType: ScannerType, minScore = 60) {
+export async function fetchScannerResults(scannerType: ScannerType, minScore = 0) {
   return api.get<ScannerResult[]>(`/scanner/results?scanner_type=${scannerType}&min_score=${minScore}`)
 }
 

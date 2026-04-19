@@ -17,8 +17,15 @@ function toneForScore(score: number): 'good' | 'warn' | 'bad' {
 
 function whyText(why: any): string {
   if (!why) return '—'
-  if (Array.isArray(why)) return why.slice(0, 2).join(' · ') || '—'
-  const vals = Object.values(why as Record<string, string[]>).flat()
+  if (Array.isArray(why)) return why.slice(0, 3).join(' · ') || '—'
+  // why_selected is a dict with 'highlights' key
+  if (why.highlights && Array.isArray(why.highlights)) {
+    return why.highlights.slice(0, 3).join(' · ') || '—'
+  }
+  // fallback: flatten all values
+  const vals = Object.values(why as Record<string, any>)
+    .flatMap(v => Array.isArray(v) ? v : [String(v)])
+    .filter(v => typeof v === 'string' && v.length > 2)
   return vals.slice(0, 2).join(' · ') || '—'
 }
 

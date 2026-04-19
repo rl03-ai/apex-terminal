@@ -258,7 +258,7 @@ def fetch_news_events(ticker: str) -> list[dict[str, Any]]:
     return events
 
 
-def compute_news_catalyst_score(news_events: list[dict[str, Any]]) -> dict[str, Any]:
+def compute_news_catalyst_score(news_events: list[dict[str, Any]], profile=None) -> dict[str, Any]:
     """
     Aggregate news events into a single catalyst score.
 
