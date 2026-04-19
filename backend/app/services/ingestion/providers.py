@@ -224,6 +224,14 @@ class YFinanceMarketDataProvider:
             shares = tk.get_shares_full(start='2020-01-01')
         except Exception:
             shares = None
+
+        # Fallback: get current shares outstanding from info
+        fallback_shares = None
+        try:
+            info = tk.info
+            fallback_shares = info.get('sharesOutstanding') or info.get('impliedSharesOutstanding')
+        except Exception:
+            fallback_shares = None
         if income is None or getattr(income, 'empty', True):
             return []
 
@@ -239,6 +247,8 @@ class YFinanceMarketDataProvider:
             net_income = _get_statement_value(income, ['Net Income', 'Net Income Common Stockholders'], col)
             eps = None
             outstanding = _nearest_share_count(shares, dt) if shares is not None else None
+            if outstanding is None and fallback_shares is not None:
+                outstanding = float(fallback_shares)
             if net_income is not None and outstanding not in (None, 0):
                 eps = float(net_income) / float(outstanding)
             free_cash_flow = _get_statement_value(cashflow, ['Free Cash Flow'], col)

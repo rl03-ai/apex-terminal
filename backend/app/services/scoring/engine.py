@@ -299,22 +299,56 @@ def compute_quality_score(
     if not latest:
         return 45.0, ["Missing recent fundamentals; quality score defaulted to neutral."]
 
-    fcf_score     = 85.0 if (latest.free_cash_flow or 0) > 0 else 35.0
-    leverage_ratio = _safe_ratio(latest.total_debt, latest.revenue)
-    leverage_score = (
-        80.0 if leverage_ratio is not None and leverage_ratio < 0.5
-        else _score_linear((leverage_ratio or 1.5) * -1, -2.0, -0.2)
-    )
-    runway_ratio = _safe_ratio(
-        latest.cash_and_equivalents,
-        abs(latest.free_cash_flow)
-        if latest.free_cash_flow and latest.free_cash_flow < 0
-        else latest.revenue,
-    )
-    runway_score = (
-        80.0 if runway_ratio is not None and runway_ratio > 1
-        else _score_linear(runway_ratio, 0.1, 1.0)
-    )
+    fcf = latest.free_cash_flow or 0
+    revenue = latest.revenue or 0
+    cash = latest.cash_and_equivalents or 0
+    debt = latest.total_debt or 0
+
+    # FCF score: scale by FCF margin (FCF / Revenue)
+    if fcf > 0 and revenue > 0:
+        fcf_margin = fcf / revenue
+        # 30%+ FCF margin → 95, 15% → 80, 5% → 65, 0% → 50
+        fcf_score = clamp_score(50 + fcf_margin * 150)
+    elif fcf > 0:
+        fcf_score = 75.0
+    else:
+        fcf_score = 35.0
+
+    # Leverage: Net Debt to Revenue (negative = net cash positive)
+    net_debt = debt - cash
+    leverage_ratio = _safe_ratio(debt, revenue)
+    if net_debt < 0:
+        # Company has more cash than debt → excellent
+        leverage_score = 90.0
+    elif leverage_ratio is not None and leverage_ratio < 0.3:
+        leverage_score = 85.0
+    elif leverage_ratio is not None and leverage_ratio < 0.6:
+        leverage_score = 70.0
+    elif leverage_ratio is not None and leverage_ratio < 1.0:
+        leverage_score = 55.0
+    else:
+        leverage_score = _score_linear((leverage_ratio or 1.5) * -1, -2.0, -0.2)
+
+    # Runway: only meaningful when FCF is negative (burning cash)
+    # When FCF is positive, the company doesn't need runway — use cash coverage instead
+    if fcf < 0 and cash > 0:
+        runway_ratio = _safe_ratio(cash, abs(fcf))
+        # Years of runway: >3y = 80, 1y = 50, <0.5y = 15
+        runway_score = _score_linear(runway_ratio, 0.25, 3.0)
+        runway_label = f"{runway_ratio:.1f} years of runway at current burn rate"
+    elif fcf > 0:
+        # Cash coverage of debt (how many years of FCF to pay all debt)
+        if debt > 0:
+            debt_coverage = fcf / debt
+            # 2x = 80, 1x = 60, 0.5x = 45, 0.1x = 20
+            runway_score = clamp_score(40 + debt_coverage * 20)
+            runway_label = f"FCF covers {debt_coverage:.1f}x of total debt"
+        else:
+            runway_score = 90.0
+            runway_label = "No debt, strong FCF"
+    else:
+        runway_score = 40.0
+        runway_label = "No cash or FCF data"
     margin_stability = None
     if latest.gross_margin is not None and year_ago and year_ago.gross_margin is not None:
         margin_stability = abs(latest.gross_margin - year_ago.gross_margin) * 100
@@ -347,13 +381,32 @@ def compute_quality_score(
         total = clamp_score(total - 15)
         reasons.append("Negative FCF with debt above cash applied a quality penalty.")
 
-    reasons += [
-        f'FCF is {"positive" if (latest.free_cash_flow or 0) > 0 else "negative"}.',
-        f"Debt/Revenue proxy at {(leverage_ratio or 0):.2f}.",
-        f"Cash runway proxy at {(runway_ratio or 0):.2f}.",
-    ]
+    # Readable explanations
+    if fcf > 0:
+        fcf_pct = (fcf / revenue * 100) if revenue > 0 else 0
+        reasons.append(f"FCF positive: ${fcf/1e9:.1f}B ({fcf_pct:.0f}% of revenue).")
+    else:
+        reasons.append(f"FCF negative: ${fcf/1e9:.1f}B (burning cash).")
+
+    if net_debt < 0:
+        reasons.append(f"Net cash position: ${-net_debt/1e9:.1f}B more cash than debt.")
+    elif leverage_ratio is not None:
+        if leverage_ratio < 0.3:
+            reasons.append(f"Low leverage: debt is {leverage_ratio*100:.0f}% of revenue.")
+        elif leverage_ratio < 1.0:
+            reasons.append(f"Moderate leverage: debt is {leverage_ratio*100:.0f}% of revenue.")
+        else:
+            reasons.append(f"High leverage: debt is {leverage_ratio*100:.0f}% of revenue.")
+
+    reasons.append(runway_label)
+
     if dilution is not None:
-        reasons.append(f"Share count change YoY at {dilution:.1f}%.")
+        if dilution <= 1:
+            reasons.append(f"Shares buyback: {-dilution:.1f}% reduction YoY.")
+        elif dilution <= 3:
+            reasons.append(f"Minimal dilution: +{dilution:.1f}% shares YoY.")
+        else:
+            reasons.append(f"Dilution: +{dilution:.1f}% shares YoY.")
     return total, reasons
 
 
