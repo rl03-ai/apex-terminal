@@ -562,11 +562,11 @@ def compute_narrative_score(
             )
         catalyst_composite = cat.score
         if cat.catalyst_type != "none":
+            e_s = f'{cat.earnings_score:.0f}' if cat.earnings_score is not None else '—'
+            i_s = f'{cat.insider_score:.0f}' if cat.insider_score is not None else '—'
+            n_s = f'{cat.news_score:.0f}' if cat.news_score is not None else '—'
             reasons.append(
-                f"CatalystScore={cat.score:.1f} "
-                f"[earnings={cat.earnings_score:.0f if cat.earnings_score else '—'} "
-                f"insider={cat.insider_score:.0f if cat.insider_score else '—'} "
-                f"news={cat.news_score:.0f if cat.news_score else '—'}]."
+                f"CatalystScore={cat.score:.1f} [earnings={e_s} insider={i_s} news={n_s}]."
             )
     except Exception:
         # Fallback: derive from raw events directly if aggregator unavailable
