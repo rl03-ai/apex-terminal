@@ -696,10 +696,51 @@ def compute_market_score(
         direction = "accelerating" if accel > 5 else ("decelerating" if accel < -5 else "stable")
         reasons.append(f"Momentum {direction} (accel={accel:+.1f}% ann.).")
 
+    # ── D. TrendChange regime (NEW) ───────────────────────────────────────────
+    # Composite technical regime from multi-timeframe detector
+    trend_regime_score = 50.0
+    try:
+        import pandas as pd
+        if len(ordered) >= 60:
+            df = pd.DataFrame([{
+                'date':   p.date,
+                'open':   p.open,
+                'high':   p.high,
+                'low':    p.low,
+                'close':  p.close,
+                'volume': p.volume or 0,
+            } for p in ordered])
+            df = df.set_index(pd.to_datetime(df['date'])).drop(columns=['date'])
+
+            from app.services.technical.equity_trend import analyse_equity_trend
+            trend = analyse_equity_trend(df)
+
+            if trend.regime != 'UNKNOWN':
+                # Map regime to score: STRONG_UPTREND→90, UPTREND→70, RANGING→50, etc.
+                regime_base = {
+                    'STRONG_UPTREND': 90.0,
+                    'UPTREND':        72.0,
+                    'TOPPING':        45.0,
+                    'RANGING':        50.0,
+                    'BASING':         42.0,
+                    'DOWNTREND':      20.0,
+                }.get(trend.regime, 50.0)
+                # Blend with confidence: low confidence → pull toward 50
+                trend_regime_score = 50.0 + (regime_base - 50.0) * trend.confidence
+                reasons.append(
+                    f"Trend regime: {trend.regime.replace('_',' ')} "
+                    f"(conf {trend.confidence*100:.0f}%, entry {trend.entry_signal.replace('_',' ')})."
+                )
+    except Exception as exc:
+        import logging as _log
+        _log.getLogger(__name__).debug("TrendChange integration failed: %s", exc)
+
+    # Final weighted composite — 25% TrendChange, rest rebalanced
     total = clamp_score(
-        0.35 * technical_structure
-        + 0.35 * intermediate_momentum
-        + 0.30 * acceleration_score
+        0.28 * technical_structure
+        + 0.27 * intermediate_momentum
+        + 0.22 * acceleration_score
+        + 0.23 * trend_regime_score
     )
     return total, reasons
 
