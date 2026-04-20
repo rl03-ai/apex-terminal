@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, timezone
 from typing import Sequence
 
 import pandas as pd
@@ -90,14 +90,21 @@ def _evaluate_c1_fundamentals(
     points = 0
     max_points = 4
 
-    cutoff_30d = datetime.utcnow() - timedelta(days=30)
-    cutoff_90d = datetime.utcnow() - timedelta(days=90)
+    cutoff_30d = datetime.now(timezone.utc) - timedelta(days=30)
+    cutoff_90d = datetime.now(timezone.utc) - timedelta(days=90)
 
     # Insider buying in 30d
     insider_score = 0.0
+    def _in_window(event_date, cutoff):
+        if event_date is None: return False
+        # Normalize to aware UTC if naive
+        if event_date.tzinfo is None:
+            event_date = event_date.replace(tzinfo=timezone.utc)
+        return event_date >= cutoff
+
     recent_insider = [e for e in events
                       if e.event_type == 'insider_buy'
-                      and e.event_date >= cutoff_30d]
+                      and _in_window(e.event_date, cutoff_30d)]
     if recent_insider:
         max_imp = max((e.importance_score or 0) for e in recent_insider)
         if max_imp >= 60:
@@ -108,7 +115,7 @@ def _evaluate_c1_fundamentals(
     # Earnings beat in 90d
     recent_earnings = [e for e in events
                        if e.event_type == 'earnings_result'
-                       and e.event_date >= cutoff_90d
+                       and _in_window(e.event_date, cutoff_90d)
                        and (e.sentiment_score or 0) > 0.3]
     if recent_earnings:
         points += 1
