@@ -98,6 +98,23 @@ def _job_expand_universe() -> None:
         logger.exception("daily_expand FAILED: %s", exc)
 
 
+
+
+def _job_early_signals() -> None:
+    """Refresh early signal scanner."""
+    try:
+        from app.core.database import SessionLocal
+        from app.services.scanner.early_signal import refresh_early_signals
+        db = SessionLocal()
+        try:
+            result = refresh_early_signals(db)
+            logger.info("daily_early_signals done — %s", result)
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.exception("daily_early_signals FAILED: %s", exc)
+
+
 def _job_scoring() -> None:
     try:
         from app.jobs.daily_scoring import run as run_scoring
@@ -191,6 +208,18 @@ def start_scheduler() -> BackgroundScheduler:
     )
 
     # 01:30 — run scanner profiles
+    scheduler.add_job(
+        _job_early_signals,
+        CronTrigger(
+            hour=int(os.getenv("SCHEDULER_EARLY_HOUR", "1")),
+            minute=int(os.getenv("SCHEDULER_EARLY_MINUTE", "45")),
+            timezone=tz,
+        ),
+        id="daily_early_signals",
+        name="Refresh early signals scanner",
+        replace_existing=True,
+    )
+
     scheduler.add_job(
         _job_scanner,
         CronTrigger(hour=scanner_hour, minute=scanner_minute, timezone=tz),

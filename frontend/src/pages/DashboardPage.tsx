@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchAlerts, fetchPortfolios, fetchPortfolioPositions, fetchTopOpportunities } from '../api/endpoints'
+import { fetchAlerts, fetchEarlySignals, fetchPortfolios, fetchPortfolioPositions, fetchTopOpportunities } from '../api/endpoints'
+import type { EarlySignalItem } from '../api/endpoints'
 import type { AlertItem, Portfolio, Position, ScannerResult } from '../types'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -13,6 +14,7 @@ import { StatusPill } from '../components/StatusPill'
 export function DashboardPage() {
   const navigate = useNavigate()
   const [scannerRows, setScannerRows] = useState<ScannerResult[]>([])
+  const [earlySignals, setEarlySignals] = useState<EarlySignalItem[]>([])
   const [portfolios, setPortfolios] = useState<Portfolio[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [alerts, setAlerts] = useState<AlertItem[]>([])
@@ -23,11 +25,13 @@ export function DashboardPage() {
     async function load() {
       try {
         setLoading(true)
-        const [scannerData, portfolioData, alertData] = await Promise.all([
+        const [scannerData, portfolioData, alertData, earlyData] = await Promise.all([
           fetchTopOpportunities(),
           fetchPortfolios(),
           fetchAlerts(),
+          fetchEarlySignals(10).catch(() => []),
         ])
+        setEarlySignals(earlyData)
         // Deduplicate by ticker — keep highest priority_score per ticker
         const seen = new Map<string, typeof scannerData[0]>()
         for (const row of scannerData) {
@@ -131,6 +135,46 @@ export function DashboardPage() {
           </div>
         </SectionCard>
       </div>
+
+      {/* Early Signals — high-priority section */}
+      {earlySignals.length > 0 && (
+        <SectionCard title={`⚡ Early Signals (${earlySignals.length})`}>
+          <div className="early-signals-grid">
+            {earlySignals.map((es) => (
+              <div
+                className="early-signal-card"
+                key={es.id}
+                onClick={() => navigate(`/asset/${es.ticker}`)}
+              >
+                <div className="es-header">
+                  <strong className="es-ticker">{es.ticker}</strong>
+                  <span className="es-score">{es.signal_score.toFixed(0)}</span>
+                </div>
+                <div className="es-name">{es.name}</div>
+                <div className="es-price-row">
+                  <span>${es.current_price.toFixed(2)}</span>
+                  <span className={`es-pct ${es.pct_move_since >= 0 ? 'pos' : 'neg'}`}>
+                    {es.pct_move_since >= 0 ? '+' : ''}{es.pct_move_since.toFixed(1)}% desde detecção
+                  </span>
+                </div>
+                <div className="es-criteria">
+                  {es.criteria_passed.map((c) => (
+                    <span key={c} className={`es-criterion es-criterion-${c}`}>
+                      {c === 'fundamentals'  ? '💎 Fund' :
+                       c === 'breakout'      ? '🚀 Breakout' :
+                       c === 'regime_flip'   ? '🔄 Flip' :
+                       c === 'momentum'      ? '📈 Mom' : c}
+                    </span>
+                  ))}
+                </div>
+                <div className="es-footer muted small">
+                  Detectado {es.days_active}d · Score estrutural {es.total_score.toFixed(0)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
 
       <div className="two-col-grid">
         <SectionCard title="Alertas recentes">

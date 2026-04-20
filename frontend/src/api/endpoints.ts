@@ -44,3 +44,22 @@ export async function fetchAlerts() {
 export async function fetchScannerSectors() {
   return api.get<string[]>('/scanner/sectors')
 }
+
+export interface EarlySignalItem {
+  id: string
+  ticker: string
+  name: string
+  sector?: string
+  first_detected_date: string
+  first_detected_price: number
+  current_price: number
+  pct_move_since: number
+  signal_score: number
+  total_score: number
+  criteria_passed: string[]
+  days_active: number
+}
+
+export async function fetchEarlySignals(limit = 10) {
+  return api.get<EarlySignalItem[]>(`/early-signals?limit=${limit}`)
+}

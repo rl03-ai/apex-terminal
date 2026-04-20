@@ -1350,3 +1350,94 @@ th {
   .pnl-grid { grid-template-columns: 1fr; gap: 1rem; }
   .pnl-value { font-size: 1.3rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   EARLY SIGNALS
+═══════════════════════════════════════════════════════════════════ */
+
+.early-signals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.early-signal-card {
+  background: linear-gradient(135deg, rgba(34,197,94,0.06) 0%, rgba(255,159,26,0.04) 100%);
+  border: 1px solid rgba(255,159,26,0.25);
+  border-radius: 14px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.early-signal-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,159,26,0.5);
+  box-shadow: 0 6px 18px rgba(255,159,26,0.12);
+}
+
+.es-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.es-ticker {
+  font-size: 1.1rem;
+  color: #ffcb84;
+  letter-spacing: -0.01em;
+}
+.es-score {
+  background: #ff9f1a;
+  color: #04070d;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.es-name {
+  color: #c7d3e8;
+  font-size: 0.85rem;
+}
+.es-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.es-price-row > span:first-child {
+  color: #eef3fb;
+  font-weight: 600;
+}
+.es-pct.pos { color: #22c55e; }
+.es-pct.neg { color: #f87171; }
+.es-criteria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+.es-criterion {
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: rgba(255,255,255,0.06);
+  color: #c7d3e8;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.es-criterion-fundamentals { color: #ffcb84; border-color: rgba(255,203,132,0.3); }
+.es-criterion-breakout     { color: #22c55e; border-color: rgba(34,197,94,0.3); }
+.es-criterion-regime_flip  { color: #6ec1ff; border-color: rgba(110,193,255,0.3); }
+.es-criterion-momentum     { color: #a78bfa; border-color: rgba(167,139,250,0.3); }
+.es-footer {
+  margin-top: 0.35rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+@media (max-width: 768px) {
+  .early-signals-grid { grid-template-columns: 1fr; }
+}
