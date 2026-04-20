@@ -15,15 +15,41 @@ from app.services.scoring.engine import refresh_asset_score
 router = APIRouter()
 
 
-@router.get('/search', response_model=list[AssetOut])
-def search_assets(q: str = Query(..., min_length=1), db: Session = Depends(get_db)) -> list[Asset]:
-    return (
+@router.get('/search')
+def search_assets(q: str = Query(..., min_length=1), db: Session = Depends(get_db)) -> list[dict]:
+    """Search assets by ticker or name, returning latest price for each."""
+    q_upper = q.upper()
+    # Prioritize exact ticker match, then prefix match, then substring match
+    assets = (
         db.query(Asset)
         .filter((Asset.ticker.ilike(f'%{q}%')) | (Asset.name.ilike(f'%{q}%')))
         .order_by(Asset.ticker.asc())
-        .limit(25)
+        .limit(20)
         .all()
     )
+
+    # Sort so exact matches come first, then prefix matches
+    def sort_key(a):
+        if a.ticker == q_upper: return 0
+        if a.ticker.startswith(q_upper): return 1
+        return 2
+    assets.sort(key=sort_key)
+
+    result: list[dict] = []
+    for a in assets:
+        latest_px = (
+            db.query(AssetPriceDaily)
+            .filter(AssetPriceDaily.asset_id == a.id)
+            .order_by(desc(AssetPriceDaily.date))
+            .first()
+        )
+        result.append({
+            'ticker': a.ticker,
+            'name': a.name,
+            'sector': a.sector,
+            'current_price': latest_px.close if latest_px else None,
+        })
+    return result
 
 
 @router.get('/{ticker}', response_model=AssetOut)
@@ -203,3 +229,70 @@ def get_asset_trend(ticker: str, db: Session = Depends(get_db)) -> dict:
         'reasons': trend.reasons,
         'market_score_boost': trend.market_score_boost,
     }
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Position transactions (buy/sell lots)
+# ─────────────────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel
+from datetime import date as _date
+from app.models.portfolio import Position, PositionLot
+import uuid
+
+class TransactionRequest(BaseModel):
+    type: str              # 'buy' or 'sell'
+    quantity: float
+    price: float
+    date: _date
+    notes: str | None = None
+
+
+def _recompute_position_from_lots(db, position_id: str) -> tuple[float, float, float, float]:
+    """
+    Recompute avg_cost, quantity, invested_amount, realised_pnl from lots.
+
+    Weighted-average cost for buys.
+    Sells keep the avg_cost unchanged (standard accounting).
+
+    Returns (avg_cost, quantity, invested_amount, realised_pnl).
+    """
+    lots = (
+        db.query(PositionLot)
+        .filter(PositionLot.position_id == position_id)
+        .order_by(PositionLot.buy_date.asc(), PositionLot.created_at.asc())
+        .all()
+    )
+
+    avg_cost = 0.0
+    quantity = 0.0
+    realised_pnl = 0.0
+
+    for lot in lots:
+        qty = lot.quantity
+        price = lot.price
+        # Lots with positive quantity are buys, negative are sells (convention)
+        if qty > 0:
+            # Weighted average cost update
+            total_cost_before = avg_cost * quantity
+            total_cost_new = price * qty
+            quantity_new = quantity + qty
+            if quantity_new > 0:
+                avg_cost = (total_cost_before + total_cost_new) / quantity_new
+            quantity = quantity_new
+        else:
+            # Sell — reduces quantity, avg_cost unchanged, realised P&L updates
+            sell_qty = abs(qty)
+            realised_pnl += (price - avg_cost) * sell_qty
+            quantity -= sell_qty
+
+    # Invested amount = avg_cost * current qty (cost basis of open position)
+    invested = avg_cost * quantity if quantity > 0 else 0.0
+    return avg_cost, quantity, invested, realised_pnl
+
+
+@router.get('/{ticker}/_placeholder', include_in_schema=False)
+def _ticker_placeholder_stub(ticker: str) -> dict:
+    # Prevents collision with position routes below
+    return {}

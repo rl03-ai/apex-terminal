@@ -1203,3 +1203,150 @@ th {
   .position-table { font-size: 0.8rem; }
   .position-table th, .position-table td { padding: 0.5rem 0.35rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   POSITION DETAIL + TRANSACTIONS
+═══════════════════════════════════════════════════════════════════ */
+
+/* Autocomplete */
+.autocomplete-field { position: relative; }
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #0f1620;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.1s;
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover { background: rgba(255,159,26,0.08); }
+.autocomplete-main { display: flex; flex-direction: column; gap: 2px; }
+.autocomplete-main strong { color: #ffcb84; font-size: 0.95rem; }
+.autocomplete-name { color: #8ea0bb; font-size: 0.82rem; }
+.autocomplete-price { color: #eef3fb; font-weight: 600; font-size: 0.9rem; }
+
+.selected-asset {
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 8px;
+  color: #8ea0bb;
+  font-size: 0.82rem;
+}
+
+/* Transaction type selector */
+.tx-type-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+.tx-type-btn {
+  flex: 1;
+  padding: 0.7rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #c7d3e8;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.12s;
+}
+.tx-type-active-buy {
+  background: rgba(34,197,94,0.15) !important;
+  border-color: #22c55e !important;
+  color: #22c55e !important;
+}
+.tx-type-active-sell {
+  background: rgba(248,113,113,0.15) !important;
+  border-color: #f87171 !important;
+  color: #f87171 !important;
+}
+
+/* Buy/Sell buttons */
+.btn-buy {
+  background: rgba(34,197,94,0.15);
+  border: 1px solid #22c55e;
+  color: #22c55e;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.btn-buy:hover { background: rgba(34,197,94,0.25); }
+.btn-sell {
+  background: rgba(248,113,113,0.12);
+  border: 1px solid #f87171;
+  color: #f87171;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.btn-sell:hover { background: rgba(248,113,113,0.2); }
+
+.btn-link-small {
+  background: transparent;
+  border: none;
+  color: #ff9f1a;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-top: 2px;
+  text-align: left;
+  text-decoration: underline;
+  min-height: auto;
+}
+
+/* Transaction badges */
+.tx-badge {
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.tx-badge-buy  { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.35); }
+.tx-badge-sell { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+
+/* P&L grid */
+.pnl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+.pnl-label {
+  color: #8ea0bb;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.pnl-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+@media (max-width: 768px) {
+  .pnl-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .pnl-value { font-size: 1.3rem; }
+}

@@ -154,8 +154,8 @@ export function PortfolioPage() {
                   const pnlPct  = p.invested_amount ? (pnl / p.invested_amount) * 100 : 0
                   const pnlColor = pnl >= 0 ? '#22c55e' : '#f87171'
                   return (
-                    <tr key={p.id} className="table-row-clickable">
-                      <td className="strong table-ticker" onClick={() => navigate(`/asset/${p.ticker}`)}>
+                    <tr key={p.id} className="table-row-clickable" onClick={() => navigate(`/positions/${p.id}`)}>
+                      <td className="strong table-ticker">
                         {p.ticker}
                       </td>
                       <td>{p.quantity.toFixed(4).replace(/\.?0+$/, '')}</td>
