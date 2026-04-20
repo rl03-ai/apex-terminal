@@ -170,6 +170,7 @@ export function PositionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showTxModal, setShowTxModal] = useState<'buy' | 'sell' | null>(null)
+  const [riskInfo, setRiskInfo] = useState<{ stop_price: number; stop_method: string; distance_to_stop_pct: number; risk_level: string; risk_reason: string } | null>(null)
 
   async function loadData() {
     if (!id) return
@@ -193,6 +194,21 @@ export function PositionDetailPage() {
       setPortfolioId(pfId)
       setSummary(found)
       const txs = await api.get<Transaction[]>(`/portfolios/${pfId}/positions/${id}/transactions`)
+
+      // Fetch risk info (stop-loss suggestion)
+      try {
+        const riskData: any = await api.get(`/portfolios/${pfId}/risk`)
+        const posRisk = (riskData.position_risks || []).find((pr: any) => pr.position_id === id)
+        if (posRisk) {
+          setRiskInfo({
+            stop_price: posRisk.stop_price,
+            stop_method: posRisk.stop_method,
+            distance_to_stop_pct: posRisk.distance_to_stop_pct,
+            risk_level: posRisk.risk_level,
+            risk_reason: posRisk.risk_reason,
+          })
+        }
+      } catch { /* skip */ }
       setTransactions(txs)
       setError(null)
     } catch (err) {
@@ -301,6 +317,31 @@ export function PositionDetailPage() {
           </div>
         </div>
       </div>
+
+
+      {/* Stop-loss & Risk */}
+      {riskInfo && (
+        <div className="card">
+          <div className="section-header"><h2>🛡️ Gestão de risco</h2></div>
+          <div className="stop-loss-display">
+            <div className="stop-main">
+              <div>
+                <div className="stop-label">Stop-loss sugerido</div>
+                <div className="stop-price">${riskInfo.stop_price.toFixed(2)}</div>
+                <div className="muted small">
+                  Método: <strong>{riskInfo.stop_method}</strong> · {riskInfo.distance_to_stop_pct.toFixed(1)}% abaixo do preço atual
+                </div>
+              </div>
+              <div className={`risk-badge-large risk-${riskInfo.risk_level}`}>
+                {riskInfo.risk_level === 'red' ? '🔴' : riskInfo.risk_level === 'yellow' ? '🟡' : '🟢'}
+                <div className="risk-badge-label">
+                  {riskInfo.risk_reason}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="section-header">

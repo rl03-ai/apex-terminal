@@ -509,3 +509,56 @@ def position_summary(portfolio_id: str, position_id: str, db: Session = Depends(
         'realised_pnl': realised_pnl,
         'total_pnl': round(unrealised_pnl + realised_pnl, 2),
     }
+
+
+
+@router.get('/{portfolio_id}/risk')
+def portfolio_risk(portfolio_id: str, db: Session = Depends(get_db)) -> dict:
+    """Portfolio risk analysis: concentration, stops, drawdowns."""
+    from app.services.portfolio.risk import compute_portfolio_risk
+
+    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail='Portfolio not found')
+
+    risk = compute_portfolio_risk(db, portfolio)
+
+    return {
+        'total_value': risk.total_value,
+        'total_invested': risk.total_invested,
+        'total_pnl_pct': risk.total_pnl_pct,
+        'num_positions': risk.num_positions,
+        'top_ticker_concentration': risk.top_ticker_concentration,
+        'top_ticker_symbol': risk.top_ticker_symbol,
+        'top_sector_concentration': risk.top_sector_concentration,
+        'top_sector_name': risk.top_sector_name,
+        'diversification_score': risk.diversification_score,
+        'alerts': risk.alerts,
+        'positions': [
+            {
+                'position_id': p.position_id,
+                'ticker': p.ticker,
+                'weight_pct': p.weight_pct,
+                'drawdown_pct': p.drawdown_pct,
+                'risk_status': p.risk_status,
+                'risk_reasons': p.risk_reasons,
+                'stop_loss': {
+                    'price': p.stop_loss.price,
+                    'distance_pct': p.stop_loss.distance_pct,
+                    'method': p.stop_loss.method,
+                    'reasoning': p.stop_loss.reasoning,
+                } if p.stop_loss else None,
+            }
+            for p in risk.positions
+        ],
+    }
+
+
+@router.get('/{portfolio_id}/risk', summary='Portfolio risk overview')
+def get_portfolio_risk(portfolio_id: str, db: Session = Depends(get_db)) -> dict:
+    """Full risk analysis: concentration, per-position risk, stop-loss suggestions."""
+    from app.services.portfolio.risk import compute_portfolio_risk
+    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail='Portfolio not found')
+    return compute_portfolio_risk(db, portfolio_id)
