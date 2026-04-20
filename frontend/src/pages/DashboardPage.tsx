@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchAlerts, fetchEarlySignals, fetchPortfolios, fetchPortfolioPositions, fetchTopOpportunities } from '../api/endpoints'
-import type { EarlySignalItem } from '../api/endpoints'
+import { fetchAlerts, fetchEarlySignals, fetchInsiderAlerts, fetchPortfolios, fetchPortfolioPositions, fetchTopOpportunities } from '../api/endpoints'
+import type { EarlySignalItem, InsiderAlertItem } from '../api/endpoints'
 import type { AlertItem, Portfolio, Position, ScannerResult } from '../types'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -15,6 +15,7 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const [scannerRows, setScannerRows] = useState<ScannerResult[]>([])
   const [earlySignals, setEarlySignals] = useState<EarlySignalItem[]>([])
+  const [insiderAlerts, setInsiderAlerts] = useState<InsiderAlertItem[]>([])
   const [portfolios, setPortfolios] = useState<Portfolio[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [alerts, setAlerts] = useState<AlertItem[]>([])
@@ -25,13 +26,15 @@ export function DashboardPage() {
     async function load() {
       try {
         setLoading(true)
-        const [scannerData, portfolioData, alertData, earlyData] = await Promise.all([
+        const [scannerData, portfolioData, alertData, earlyData, insiderData] = await Promise.all([
           fetchTopOpportunities(),
           fetchPortfolios(),
           fetchAlerts(),
           fetchEarlySignals(10).catch(() => []),
+          fetchInsiderAlerts(15).catch(() => []),
         ])
         setEarlySignals(earlyData)
+        setInsiderAlerts(insiderData)
         // Deduplicate by ticker — keep highest priority_score per ticker
         const seen = new Map<string, typeof scannerData[0]>()
         for (const row of scannerData) {
@@ -169,6 +172,38 @@ export function DashboardPage() {
                 </div>
                 <div className="es-footer muted small">
                   Detectado {es.days_active}d · Score estrutural {es.total_score.toFixed(0)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Insider Alerts — gestão a comprar */}
+      {insiderAlerts.length > 0 && (
+        <SectionCard title={`💼 Insider Alerts (${insiderAlerts.length})`}>
+          <div className="insider-alerts-grid">
+            {insiderAlerts.map((ia) => (
+              <div
+                className={`insider-alert-card signal-${ia.signal_type.toLowerCase()}`}
+                key={ia.id}
+                onClick={() => navigate(`/asset/${ia.ticker}`)}
+              >
+                <div className="es-header">
+                  <strong className="es-ticker">{ia.ticker}</strong>
+                  <span className={`ia-badge ia-${ia.signal_type.toLowerCase()}`}>
+                    {ia.signal_type === 'CLUSTER_BUY'   ? '👥 CLUSTER' :
+                     ia.signal_type === 'LARGE_BUY'     ? '💰 LARGE' :
+                     '👔 EXEC'}
+                  </span>
+                </div>
+                <div className="es-name">{ia.name}</div>
+                <div className="ia-money">${(ia.dollar_amount/1000).toFixed(0)}k comprados</div>
+                <div className="muted small">
+                  {ia.num_insiders} insider{ia.num_insiders > 1 ? 's' : ''} · {ia.num_transactions} transacç{ia.num_transactions > 1 ? 'ões' : 'ão'}
+                </div>
+                <div className="es-footer muted small">
+                  Score {ia.total_score.toFixed(0)} · maior trans. ${(ia.largest_single/1000).toFixed(0)}k
                 </div>
               </div>
             ))}

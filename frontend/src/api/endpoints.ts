@@ -63,3 +63,22 @@ export interface EarlySignalItem {
 export async function fetchEarlySignals(limit = 10) {
   return api.get<EarlySignalItem[]>(`/early-signals?limit=${limit}`)
 }
+
+export interface InsiderAlertItem {
+  id: string
+  ticker: string
+  name: string
+  sector?: string
+  signal_type: 'CLUSTER_BUY' | 'LARGE_BUY' | 'EXECUTIVE_BUY'
+  dollar_amount: number
+  num_insiders: number
+  num_transactions: number
+  largest_single: number
+  most_recent_date: string | null
+  total_score: number
+  details: string[]
+}
+
+export async function fetchInsiderAlerts(limit = 15) {
+  return api.get<InsiderAlertItem[]>(`/insider-alerts?limit=${limit}`)
+}

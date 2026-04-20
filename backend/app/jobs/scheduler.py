@@ -100,6 +100,23 @@ def _job_expand_universe() -> None:
 
 
 
+
+
+def _job_insider_alerts() -> None:
+    """Refresh insider alerts scanner."""
+    try:
+        from app.core.database import SessionLocal
+        from app.services.scanner.insider_alert import refresh_insider_alerts
+        db = SessionLocal()
+        try:
+            result = refresh_insider_alerts(db)
+            logger.info("daily_insider_alerts done — %s", result)
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.exception("daily_insider_alerts FAILED: %s", exc)
+
+
 def _job_early_signals() -> None:
     """Refresh early signal scanner."""
     try:
@@ -217,6 +234,18 @@ def start_scheduler() -> BackgroundScheduler:
         ),
         id="daily_early_signals",
         name="Refresh early signals scanner",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        _job_insider_alerts,
+        CronTrigger(
+            hour=int(os.getenv("SCHEDULER_INSIDER_HOUR", "1")),
+            minute=int(os.getenv("SCHEDULER_INSIDER_MINUTE", "50")),
+            timezone=tz,
+        ),
+        id="daily_insider_alerts",
+        name="Refresh insider alerts scanner",
         replace_existing=True,
     )
 

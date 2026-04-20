@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import alerts, assets, auth, backtest, catalyst, health, portfolios, positions, scanner, setup, universe, xbrl
 import app.api.routes.scanner_config as scanner_config
 import app.api.routes.early_signals as early_signals
+import app.api.routes.insider_alerts as insider_alerts
 from app.core.config import get_settings
 from app.core.database import Base, engine
 
@@ -37,6 +38,7 @@ app.include_router(xbrl.router, prefix='/xbrl', tags=['xbrl'])
 app.include_router(setup.router, tags=['setup'])
 app.include_router(scanner_config.router, prefix='/scanner', tags=['scanner-config'])
 app.include_router(early_signals.router, prefix='/early-signals', tags=['early-signals'])
+app.include_router(insider_alerts.router, prefix='/insider-alerts', tags=['insider-alerts'])
 
 
 @app.on_event('startup')
