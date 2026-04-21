@@ -4,6 +4,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 const navItems = [
   { to: '/',          label: 'Dashboard', icon: '◈' },
   { to: '/scanner',   label: 'Scanner',   icon: '⌖' },
+  { to: '/decision',  label: 'Decision',  icon: '◇' },
   { to: '/portfolio', label: 'Carteira',  icon: '◉' },
 ]
 

@@ -4,6 +4,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { PositionDetailPage } from './pages/PositionDetailPage'
 import { ScannerPage } from './pages/ScannerPage'
+import { DecisionMatrixPage } from './pages/DecisionMatrixPage'
 import { AssetDetailPage } from './pages/AssetDetailPage'
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<DashboardPage />} />
         <Route path="scanner" element={<ScannerPage />} />
+        <Route path="decision" element={<DecisionMatrixPage />} />
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="positions/:id" element={<PositionDetailPage />} />
         <Route path="asset/:ticker" element={<AssetDetailPage />} />
