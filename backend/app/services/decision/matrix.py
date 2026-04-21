@@ -230,17 +230,27 @@ def compute_decision_matrix(
         if s.asset_id not in score_by_asset:
             score_by_asset[s.asset_id] = s
 
-    rows: list[dict] = []
+    # Pre-filter: skip held + assets without scores, then sort by quality + signal presence
+    pre_candidates = []
     for asset_id in candidate_ids:
         if asset_id in held_ids:
             continue
-
-        asset = db.query(Asset).filter(Asset.id == asset_id).first()
-        if not asset:
-            continue
-
         score = score_by_asset.get(asset_id)
         if not score:
+            continue
+        # Quick priority: has timing signal? base quality?
+        has_signal = (asset_id in early_by_asset) or (asset_id in insider_by_asset)
+        priority = (1 if has_signal else 0) * 1000 + score.total_score
+        pre_candidates.append((priority, asset_id, score))
+
+    # Take top 60 candidates only (keeps response under 5 seconds)
+    pre_candidates.sort(reverse=True)
+    pre_candidates = pre_candidates[:60]
+
+    rows: list[dict] = []
+    for _, asset_id, score in pre_candidates:
+        asset = db.query(Asset).filter(Asset.id == asset_id).first()
+        if not asset:
             continue
 
         prices = (
