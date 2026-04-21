@@ -59,7 +59,7 @@ export function DecisionMatrixPage() {
       params.set('only_watchlist', String(onlyWatchlist))
       params.set('exclude_held', String(excludeHeld))
       params.set('min_verdict', minVerdict)
-      params.set('limit', '80')
+      params.set('limit', '15')
       const result = await api.get<MatrixResponse>(`/decision-matrix?${params}`)
       setData(result)
       setError(null)

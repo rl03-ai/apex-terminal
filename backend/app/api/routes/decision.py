@@ -37,7 +37,7 @@ def _get_demo_user_id(db: Session) -> str:
 def get_decision_matrix(
     only_watchlist: bool = Query(False, description='Show only watchlisted tickers'),
     exclude_held:   bool = Query(True,  description='Exclude tickers already in portfolio'),
-    limit:          int  = Query(80, ge=1, le=500),
+    limit:          int  = Query(15, ge=1, le=500),
     min_verdict:    str  = Query('all', description='Filter min verdict: all, WAIT, GOOD, STRONG_SETUP'),
     db: Session = Depends(get_db),
 ) -> dict:
