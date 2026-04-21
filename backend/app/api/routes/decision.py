@@ -37,22 +37,36 @@ def _get_demo_user_id(db: Session) -> str:
 def get_decision_matrix(
     only_watchlist: bool = Query(False, description='Show only watchlisted tickers'),
     exclude_held:   bool = Query(True,  description='Exclude tickers already in portfolio'),
+    limit:          int  = Query(80, ge=1, le=500),
+    min_verdict:    str  = Query('all', description='Filter min verdict: all, WAIT, GOOD, STRONG_SETUP'),
     db: Session = Depends(get_db),
 ) -> dict:
     from app.services.decision.matrix import compute_decision_matrix
     user_id = _get_demo_user_id(db)
-    rows = compute_decision_matrix(
+    all_rows = compute_decision_matrix(
         db, user_id=user_id,
         exclude_held=exclude_held,
         only_watchlist=only_watchlist,
     )
 
-    # Summary counts
+    # Summary counts (full)
     counts = {'STRONG_SETUP': 0, 'GOOD': 0, 'WAIT': 0, 'AVOID': 0}
-    for r in rows:
+    for r in all_rows:
         counts[r['verdict']] = counts.get(r['verdict'], 0) + 1
 
+    # Apply min verdict filter
+    if min_verdict != 'all':
+        order = {'AVOID': 0, 'WAIT': 1, 'GOOD': 2, 'STRONG_SETUP': 3}
+        min_rank = order.get(min_verdict, 0)
+        rows = [r for r in all_rows if order.get(r['verdict'], 0) >= min_rank]
+    else:
+        rows = all_rows
+
+    # Apply limit
+    rows = rows[:limit]
+
     return {
+        'total_count': len(all_rows),
         'count': len(rows),
         'verdict_counts': counts,
         'matrix': rows,

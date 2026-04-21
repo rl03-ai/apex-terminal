@@ -28,6 +28,7 @@ interface MatrixRow {
 }
 
 interface MatrixResponse {
+  total_count?: number
   count: number
   verdict_counts: Record<string, number>
   matrix: MatrixRow[]
@@ -45,7 +46,7 @@ export function DecisionMatrixPage() {
   const [data, setData] = useState<MatrixResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filterVerdict, setFilterVerdict] = useState<string>('all')
+  const [minVerdict, setMinVerdict] = useState<string>('GOOD')
   const [filterSector, setFilterSector] = useState<string>('all')
   const [onlyWatchlist, setOnlyWatchlist] = useState(false)
   const [excludeHeld, setExcludeHeld] = useState(true)
@@ -57,6 +58,8 @@ export function DecisionMatrixPage() {
       const params = new URLSearchParams()
       params.set('only_watchlist', String(onlyWatchlist))
       params.set('exclude_held', String(excludeHeld))
+      params.set('min_verdict', minVerdict)
+      params.set('limit', '80')
       const result = await api.get<MatrixResponse>(`/decision-matrix?${params}`)
       setData(result)
       setError(null)
@@ -67,7 +70,7 @@ export function DecisionMatrixPage() {
     }
   }
 
-  useEffect(() => { void load() }, [onlyWatchlist, excludeHeld])
+  useEffect(() => { void load() }, [onlyWatchlist, excludeHeld, minVerdict])
 
   const sectors = useMemo(() => {
     if (!data) return []
@@ -77,11 +80,10 @@ export function DecisionMatrixPage() {
   const filtered = useMemo(() => {
     if (!data) return []
     return data.matrix.filter(r => {
-      if (filterVerdict !== 'all' && r.verdict !== filterVerdict) return false
       if (filterSector !== 'all' && (r.sector || 'Unknown') !== filterSector) return false
       return true
     })
-  }, [data, filterVerdict, filterSector])
+  }, [data, filterSector])
 
   async function toggleWatchlist(ticker: string, isWatched: boolean) {
     try {
@@ -107,18 +109,33 @@ export function DecisionMatrixPage() {
         </div>
       </section>
 
-      {/* Verdict summary */}
+      {/* Verdict filter */}
       {data && (
         <div className="verdict-summary">
-          {Object.entries(data.verdict_counts).map(([v, n]) => (
-            <button
-              key={v}
-              className={`verdict-pill verdict-${v.toLowerCase()} ${filterVerdict === v ? 'active' : ''}`}
-              onClick={() => setFilterVerdict(filterVerdict === v ? 'all' : v)}
-            >
-              {VERDICT_LABELS[v]} ({n})
-            </button>
-          ))}
+          <button
+            className={`verdict-pill ${minVerdict === 'STRONG_SETUP' ? 'active verdict-strong_setup' : ''}`}
+            onClick={() => setMinVerdict('STRONG_SETUP')}
+          >
+            ✅ STRONG ({data.verdict_counts.STRONG_SETUP || 0})
+          </button>
+          <button
+            className={`verdict-pill ${minVerdict === 'GOOD' ? 'active verdict-good' : ''}`}
+            onClick={() => setMinVerdict('GOOD')}
+          >
+            🟢 GOOD+ ({(data.verdict_counts.STRONG_SETUP || 0) + (data.verdict_counts.GOOD || 0)})
+          </button>
+          <button
+            className={`verdict-pill ${minVerdict === 'WAIT' ? 'active verdict-wait' : ''}`}
+            onClick={() => setMinVerdict('WAIT')}
+          >
+            🟡 WAIT+ ({(data.verdict_counts.STRONG_SETUP || 0) + (data.verdict_counts.GOOD || 0) + (data.verdict_counts.WAIT || 0)})
+          </button>
+          <button
+            className={`verdict-pill ${minVerdict === 'all' ? 'active' : ''}`}
+            onClick={() => setMinVerdict('all')}
+          >
+            Tudo ({data.total_count || data.count})
+          </button>
         </div>
       )}
 
