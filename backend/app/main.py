@@ -74,14 +74,9 @@ async def _load_scanner_config():
 @app.on_event('startup')
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
-    # Start background scheduler (skip in demo mode to avoid unnecessary network calls)
-    if settings.data_provider != 'demo':
-        try:
-            from app.jobs.scheduler import start_scheduler
-            start_scheduler()
-            logger.info("Background scheduler started")
-        except Exception as exc:
-            logger.warning("Scheduler could not start: %s", exc)
+    # In-process scheduler disabled — using Render Cron Jobs instead.
+    # See app/jobs/daily_cron.py and the Cron Job service in Render dashboard.
+    logger.info("Startup complete (scheduler delegated to Render Cron)")
 
 
 @app.on_event('shutdown')
