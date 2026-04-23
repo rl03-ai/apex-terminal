@@ -221,7 +221,7 @@ def run_refresh_existing(*, workers: int = 8, **kwargs) -> BulkIngestResult:
 
     db = SessionLocal()
     try:
-        tickers = [row.ticker for row in db.execute(select(Asset.ticker)).scalars().all()]
+        tickers = list(db.execute(select(Asset.ticker)).scalars().all())
     finally:
         db.close()
 
