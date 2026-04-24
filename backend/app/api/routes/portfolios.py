@@ -520,3 +520,10 @@ def get_portfolio_risk(portfolio_id: str, db: Session = Depends(get_db)) -> dict
     if not portfolio:
         raise HTTPException(status_code=404, detail='Portfolio not found')
     return compute_portfolio_risk(db, portfolio_id)
+
+
+@router.get('/{portfolio_id}/positions/{position_id}/signal-tracker')
+def get_signal_tracker(portfolio_id: str, position_id: str, db: Session = Depends(get_db)) -> dict:
+    """Signal health + price momentum tracker for an open position."""
+    from app.services.portfolio.signal_tracker import compute_signal_tracker
+    return compute_signal_tracker(db, portfolio_id, position_id)

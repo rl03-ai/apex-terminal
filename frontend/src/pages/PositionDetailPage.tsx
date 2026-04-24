@@ -170,6 +170,7 @@ export function PositionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showTxModal, setShowTxModal] = useState<'buy' | 'sell' | null>(null)
+  const [tracker, setTracker] = useState<SignalTracker | null>(null)
   const [riskInfo, setRiskInfo] = useState<{ stop_price: number; stop_method: string; distance_to_stop_pct: number; risk_level: string; risk_reason: string } | null>(null)
 
   async function loadData() {
@@ -208,6 +209,12 @@ export function PositionDetailPage() {
             risk_reason: posRisk.risk_reason,
           })
         }
+      } catch { /* skip */ }
+
+      // Fetch signal tracker
+      try {
+        const t = await api.get<SignalTracker>(`/portfolios/${pfId}/positions/${id}/signal-tracker`)
+        setTracker(t)
       } catch { /* skip */ }
       setTransactions(txs)
       setError(null)
@@ -318,6 +325,87 @@ export function PositionDetailPage() {
         </div>
       </div>
 
+
+
+      {/* Signal Tracker */}
+      {tracker && (
+        <div className="card">
+          <div className="section-header"><h2>📡 Signal Tracker</h2></div>
+          <div className="tracker-verdict-row">
+            <div className={`tracker-verdict tracker-verdict-${tracker.verdict_color}`}>
+              {tracker.verdict === 'MANTER' ? '🟢' : tracker.verdict === 'MONITORIZAR' ? '🟡' : '🔴'}
+              {' '}{tracker.verdict}
+            </div>
+            <div className="tracker-meta muted small">
+              {tracker.days_held}d em carteira · Score {tracker.score_now?.toFixed(0)} · {tracker.regime_now.replace('_', ' ')}
+            </div>
+          </div>
+          <div className="muted small" style={{marginBottom: '1rem'}}>{tracker.verdict_detail}</div>
+
+          {/* Price momentum */}
+          <div className="tracker-returns">
+            <div className="tracker-returns-title muted small">Momentum de preço</div>
+            <div className="tracker-returns-grid">
+              {tracker.returns.since_entry !== undefined && (
+                <div className="tracker-return-cell">
+                  <div className="muted small">Desde entrada</div>
+                  <div className={`tracker-return-val ${tracker.returns.since_entry >= 0 ? 'pos' : 'neg'}`}>
+                    {tracker.returns.since_entry >= 0 ? '+' : ''}{tracker.returns.since_entry?.toFixed(1)}%
+                  </div>
+                </div>
+              )}
+              {tracker.returns['1w'] !== undefined && (
+                <div className="tracker-return-cell">
+                  <div className="muted small">1 semana</div>
+                  <div className={`tracker-return-val ${(tracker.returns['1w'] ?? 0) >= 0 ? 'pos' : 'neg'}`}>
+                    {(tracker.returns['1w'] ?? 0) >= 0 ? '+' : ''}{tracker.returns['1w']?.toFixed(1)}%
+                  </div>
+                </div>
+              )}
+              {tracker.returns['1m'] !== undefined && (
+                <div className="tracker-return-cell">
+                  <div className="muted small">1 mês</div>
+                  <div className={`tracker-return-val ${(tracker.returns['1m'] ?? 0) >= 0 ? 'pos' : 'neg'}`}>
+                    {(tracker.returns['1m'] ?? 0) >= 0 ? '+' : ''}{tracker.returns['1m']?.toFixed(1)}%
+                  </div>
+                </div>
+              )}
+              <div className="tracker-return-cell">
+                <div className="muted small">Velocidade</div>
+                <div className="tracker-velocity">{tracker.velocity_label}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Factors */}
+          <div className="tracker-factors">
+            {tracker.factors.map((f, i) => (
+              <div key={i} className={`tracker-factor tracker-factor-${f.value > 0 ? 'pos' : f.value < 0 ? 'neg' : 'neu'}`}>
+                <span className="factor-icon">
+                  {f.value > 0 ? '✓' : f.value < 0 ? '✗' : '–'}
+                </span>
+                <div>
+                  <div className="factor-name">{f.name}</div>
+                  <div className="factor-detail muted small">{f.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Upcoming events */}
+          {tracker.upcoming_events.length > 0 && (
+            <div className="tracker-events">
+              <div className="muted small" style={{marginBottom: '0.4rem'}}>Próximos eventos</div>
+              {tracker.upcoming_events.map((e, i) => (
+                <div key={i} className="tracker-event">
+                  <span className="muted small">{e.date}</span>
+                  <span>{e.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stop-loss & Risk */}
       {riskInfo && (
