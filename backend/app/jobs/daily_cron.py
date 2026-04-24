@@ -103,7 +103,7 @@ def step_expand_universe() -> None:
 
 def step_scoring() -> None:
     from app.jobs.daily_scoring import run
-    workers = int(os.getenv("SCORE_WORKERS", "4"))
+    workers = int(os.getenv("SCORE_WORKERS", "1"))
     result = run(workers=workers)
     logger.info("scoring: %s", result)
 
