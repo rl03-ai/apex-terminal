@@ -1906,3 +1906,32 @@ th {
   .verdict-summary { font-size: 0.8rem; }
   .verdict-pill { padding: 0.4rem 0.7rem; font-size: 0.78rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   REAL-TIME QUOTE
+═══════════════════════════════════════════════════════════════════ */
+
+.realtime-price {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+.rt-price {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #eef3fb;
+}
+.rt-change {
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+.rt-change.pos { color: #22c55e; background: rgba(34,197,94,0.1); }
+.rt-change.neg { color: #f87171; background: rgba(248,113,113,0.1); }
+.rt-source {
+  font-size: 0.72rem;
+  color: #8ea0bb;
+}

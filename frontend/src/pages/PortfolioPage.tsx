@@ -53,6 +53,27 @@ export function PortfolioPage() {
       const positionData = await fetchPortfolioPositions(selectedPortfolioId)
       setPositions(positionData)
 
+      // Fetch real-time quotes for each position
+      try {
+        const quotePromises = positionData.map((p: any) =>
+          api.get<any>(`/assets/${p.ticker}/quote`).catch(() => null)
+        )
+        const quotes = await Promise.all(quotePromises)
+        const updatedPositions = positionData.map((p: any, i: number) => {
+          const q = quotes[i]
+          if (q && q.price) {
+            return {
+              ...p,
+              current_value: p.quantity * q.price,
+              _realtime_price: q.price,
+              _realtime_change_pct: q.change_pct,
+            }
+          }
+          return p
+        })
+        setPositions(updatedPositions)
+      } catch { /* skip */ }
+
       // Fetch per-position risk info
       try {
         const riskData: any = await api.get(`/portfolios/${selectedPortfolioId}/risk`)
@@ -179,9 +200,7 @@ export function PortfolioPage() {
               </thead>
               <tbody>
                 {positions.map((p) => {
-                  const currentPrice = p.current_value && p.quantity
-                    ? p.current_value / p.quantity
-                    : p.avg_cost
+                  const currentPrice = (p as any)._realtime_price || (p.current_value && p.quantity ? p.current_value / p.quantity : p.avg_cost)
                   const value   = p.current_value ?? p.invested_amount
                   const pnl     = value - p.invested_amount
                   const pnlPct  = p.invested_amount ? (pnl / p.invested_amount) * 100 : 0
@@ -192,7 +211,14 @@ export function PortfolioPage() {
                       <td className="strong table-ticker">{p.ticker}</td>
                       <td>{p.quantity.toFixed(4).replace(/\.?0+$/, '')}</td>
                       <td>${p.avg_cost.toFixed(2)}</td>
-                      <td>${currentPrice.toFixed(2)}</td>
+                      <td>
+                        ${currentPrice.toFixed(2)}
+                        {(p as any)._realtime_change_pct !== undefined && (
+                          <span style={{ fontSize: '0.75rem', color: (p as any)._realtime_change_pct >= 0 ? '#22c55e' : '#f87171', marginLeft: '4px' }}>
+                            {(p as any)._realtime_change_pct >= 0 ? '+' : ''}{(p as any)._realtime_change_pct?.toFixed(1)}%
+                          </span>
+                        )}
+                      </td>
                       <td>${p.invested_amount.toFixed(2)}</td>
                       <td>${value.toFixed(2)}</td>
                       <td style={{ color: pnlColor, fontWeight: 700 }}>

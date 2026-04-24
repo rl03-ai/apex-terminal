@@ -126,6 +126,7 @@ export function AssetDetailPage() {
   const navigate = useNavigate()
   const [data, setData] = useState<AssetDetail | null>(null)
   const [trend, setTrend] = useState<TrendData | null>(null)
+  const [quote, setQuote] = useState<{ price: number; change: number | null; change_pct: number | null; source: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -136,8 +137,10 @@ export function AssetDetailPage() {
       api.get<any>(`/assets/${ticker}/score`).catch(() => null),
       api.get<any>(`/assets/${ticker}/prices`).catch(() => null),
       api.get<TrendData>(`/assets/${ticker}/trend`).catch(() => null),
-    ]).then(([scoreData, priceData, trendData]) => {
+      api.get<any>(`/assets/${ticker}/quote`).catch(() => null),
+    ]).then(([scoreData, priceData, trendData, quoteData]) => {
       setTrend(trendData)
+      if (quoteData) setQuote({ price: quoteData.price, change: quoteData.change, change_pct: quoteData.change_pct, source: quoteData.source })
       setData({
         ticker: ticker.toUpperCase(),
         name: scoreData?.name || ticker,
@@ -189,6 +192,17 @@ export function AssetDetailPage() {
         <div>
           <div className="asset-ticker">{data.ticker}</div>
           <div className="asset-name">{data.name}</div>
+        {quote && (
+          <div className="realtime-price">
+            <span className="rt-price">${quote.price.toFixed(2)}</span>
+            {quote.change !== null && (
+              <span className={`rt-change ${(quote.change ?? 0) >= 0 ? 'pos' : 'neg'}`}>
+                {(quote.change ?? 0) >= 0 ? '+' : ''}{quote.change?.toFixed(2)} ({(quote.change_pct ?? 0) >= 0 ? '+' : ''}{quote.change_pct?.toFixed(2)}%)
+              </span>
+            )}
+            <span className="rt-source">{quote.source === 'finnhub' ? '🟢 live' : '🔵 db'}</span>
+          </div>
+        )}
           <div className="asset-meta">
             {data.sector && <span className="meta-chip">{data.sector}</span>}
             {data.industry && <span className="meta-chip">{data.industry}</span>}

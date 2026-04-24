@@ -296,3 +296,82 @@ def _recompute_position_from_lots(db, position_id: str) -> tuple[float, float, f
 def _ticker_placeholder_stub(ticker: str) -> dict:
     # Prevents collision with position routes below
     return {}
+
+
+# ── Real-time quote cache (5 min TTL) ────────────────────────────────────────
+import time as _time
+_quote_cache: dict[str, tuple[float, dict]] = {}  # ticker -> (expires_at, data)
+_QUOTE_TTL = 300  # 5 minutes
+
+
+@router.get('/{ticker}/quote', summary='Real-time quote via Finnhub')
+def get_realtime_quote(ticker: str, db: Session = Depends(get_db)) -> dict:
+    """Fetch real-time price from Finnhub with 5-minute cache. Falls back to DB price."""
+    ticker = ticker.upper().strip()
+
+    # Check cache
+    if ticker in _quote_cache:
+        expires_at, cached = _quote_cache[ticker]
+        if _time.time() < expires_at:
+            return cached
+
+    # Try Finnhub
+    result: dict | None = None
+    try:
+        import httpx
+        api_key = os.getenv('FINNHUB_API_KEY', '')
+        if api_key:
+            resp = httpx.get(
+                f'https://finnhub.io/api/v1/quote',
+                params={'symbol': ticker, 'token': api_key},
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('c') and data['c'] > 0:
+                    result = {
+                        'ticker': ticker,
+                        'price': data['c'],
+                        'high': data.get('h'),
+                        'low': data.get('l'),
+                        'open': data.get('o'),
+                        'prev_close': data.get('pc'),
+                        'change': round(data['c'] - data.get('pc', data['c']), 2),
+                        'change_pct': round((data['c'] - data.get('pc', data['c'])) / data.get('pc', data['c']) * 100, 2) if data.get('pc') else 0,
+                        'source': 'finnhub',
+                        'timestamp': data.get('t'),
+                    }
+    except Exception as e:
+        logger.debug("Finnhub quote failed for %s: %s", ticker, e)
+
+    # Fallback to DB
+    if not result:
+        from sqlalchemy import desc as _desc
+        asset = db.query(Asset).filter(Asset.ticker == ticker).first()
+        if asset:
+            latest = (
+                db.query(AssetPriceDaily)
+                .filter(AssetPriceDaily.asset_id == asset.id)
+                .order_by(_desc(AssetPriceDaily.date))
+                .first()
+            )
+            if latest:
+                result = {
+                    'ticker': ticker,
+                    'price': latest.close,
+                    'high': latest.high,
+                    'low': latest.low,
+                    'open': latest.open,
+                    'prev_close': None,
+                    'change': None,
+                    'change_pct': None,
+                    'source': 'db',
+                    'timestamp': None,
+                }
+
+    if not result:
+        raise HTTPException(status_code=404, detail=f'No price data for {ticker}')
+
+    # Cache result
+    _quote_cache[ticker] = (_time.time() + _QUOTE_TTL, result)
+    return result
