@@ -28,6 +28,30 @@ interface Transaction {
   notes?: string
 }
 
+interface SignalFactor {
+  name: string
+  value: number
+  detail: string
+  critical: boolean
+}
+
+interface SignalTracker {
+  verdict: 'MANTER' | 'MONITORIZAR' | 'REVER'
+  verdict_color: 'green' | 'yellow' | 'red'
+  verdict_detail: string
+  score_now: number | null
+  regime_now: string
+  factors: SignalFactor[]
+  returns: { since_entry?: number; '1w'?: number; '2w'?: number; '1m'?: number }
+  velocity: string
+  velocity_label: string
+  current_price: number
+  entry_price: number
+  days_held: number
+  upcoming_events: { date: string; type: string; title: string }[]
+}
+
+
 interface TxModalProps {
   portfolioId: string
   positionId: string
@@ -379,7 +403,7 @@ export function PositionDetailPage() {
 
           {/* Factors */}
           <div className="tracker-factors">
-            {tracker.factors.map((f, i) => (
+            {tracker.factors.map((f: SignalFactor, i: number) => (
               <div key={i} className={`tracker-factor tracker-factor-${f.value > 0 ? 'pos' : f.value < 0 ? 'neg' : 'neu'}`}>
                 <span className="factor-icon">
                   {f.value > 0 ? '✓' : f.value < 0 ? '✗' : '–'}
@@ -396,7 +420,7 @@ export function PositionDetailPage() {
           {tracker.upcoming_events.length > 0 && (
             <div className="tracker-events">
               <div className="muted small" style={{marginBottom: '0.4rem'}}>Próximos eventos</div>
-              {tracker.upcoming_events.map((e, i) => (
+              {tracker.upcoming_events.map((e: { date: string; type: string; title: string }, i: number) => (
                 <div key={i} className="tracker-event">
                   <span className="muted small">{e.date}</span>
                   <span>{e.title}</span>
