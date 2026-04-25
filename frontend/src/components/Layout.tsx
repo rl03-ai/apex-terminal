@@ -91,7 +91,7 @@ function GlobalSearch() {
       </div>
       {query.length >= 1 && !loading && (
         <div className="global-search-dropdown">
-          {results.length > 0 ? results.slice(0, 8).map((r) => (
+          {results.slice(0, 8).map((r) => (
             <div key={r.ticker} className="global-search-item" onMouseDown={() => handleSelect(r.ticker)}>
               <div className="gs-left">
                 <strong className="gs-ticker">{r.ticker}</strong>
@@ -102,21 +102,22 @@ function GlobalSearch() {
                 {r.sector && <span className="gs-sector">{r.sector}</span>}
               </div>
             </div>
-          )) : (
-            <div className="global-search-item gs-not-found">
-              <div className="gs-left">
-                <strong className="gs-ticker">{query}</strong>
-                <span className="gs-name">Não encontrado na DB</span>
-              </div>
-              <button
-                className="btn-ingest"
-                onMouseDown={() => handleIngest(query)}
-                disabled={ingesting}
-              >
-                {ingesting ? '⏳ A adicionar…' : '+ Adicionar à DB'}
-              </button>
+          ))}
+          {/* Always show add option */}
+          <div className="global-search-item gs-add-row">
+            <div className="gs-left">
+              <span className="gs-name">
+                {results.length === 0 ? `"${query}" não encontrado na DB` : `Adicionar "${query}" à DB`}
+              </span>
             </div>
-          )}
+            <button
+              className="btn-ingest"
+              onMouseDown={() => handleIngest(query)}
+              disabled={ingesting}
+            >
+              {ingesting ? '⏳ A adicionar…' : '+ Adicionar'}
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -2169,3 +2169,8 @@ th {
 @media (max-width: 768px) {
   .tracker-returns-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+.gs-add-row {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,159,26,0.03);
+}
