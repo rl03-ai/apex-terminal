@@ -7,6 +7,7 @@ interface SubScores {
   timing: number
   regime: number
   risk_reward: number
+  institutional: number
 }
 
 interface MatrixRow {
@@ -191,6 +192,7 @@ export function DecisionMatrixPage() {
                   <th className="hide-mobile">Timing</th>
                   <th className="hide-mobile">Regime</th>
                   <th className="hide-mobile">R/R</th>
+                  <th className="hide-mobile">Inst.</th>
                   <th className="hide-mobile">Sinais</th>
                 </tr>
               </thead>
@@ -241,6 +243,9 @@ export function DecisionMatrixPage() {
                       <div className="muted small">{r.rr_details.rr_ratio.toFixed(1)}x</div>
                     </td>
                     <td className="hide-mobile">
+                      <SubScoreBar score={r.sub_scores.institutional} />
+                    </td>
+                    <td className="hide-mobile">
                       <div className="signal-icons">
                         {r.in_early_signals && <span title="Early Signal" className="signal-icon">⚡</span>}
                         {r.insider_signal && <span title={r.insider_signal} className="signal-icon">💼</span>}
@@ -279,6 +284,7 @@ export function DecisionMatrixPage() {
                 <SubScoreCard label="Timing"       score={selectedRow.sub_scores.timing}       hint={`${selectedRow.in_early_signals ? '⚡ Early signal · ' : ''}${selectedRow.insider_signal || ''}`} />
                 <SubScoreCard label="Regime"       score={selectedRow.sub_scores.regime}       hint={`${selectedRow.regime.replace('_', ' ')} · conf ${(selectedRow.regime_confidence * 100).toFixed(0)}%`} />
                 <SubScoreCard label="Risk/Reward"  score={selectedRow.sub_scores.risk_reward}  hint={`Upside ${selectedRow.rr_details.upside_pct.toFixed(0)}% · Stop ${selectedRow.rr_details.stop_distance_pct.toFixed(0)}% · R/R ${selectedRow.rr_details.rr_ratio.toFixed(1)}x`} />
+                <SubScoreCard label="Institutional" score={selectedRow.sub_scores.institutional} hint="VWAP · FVG · Delta · POC · Sweeps" />
               </div>
               <div className="matrix-detail-actions">
                 <button className="btn-secondary" onClick={() => navigate(`/asset/${selectedRow.ticker}`)}>

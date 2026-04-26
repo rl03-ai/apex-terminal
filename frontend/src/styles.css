@@ -2174,3 +2174,67 @@ th {
   border-top: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,159,26,0.03);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   INSTITUTIONAL ANALYSIS CARD
+═══════════════════════════════════════════════════════════════════ */
+
+.inst-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.inst-bias {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 0.35rem 0.9rem;
+  border-radius: 8px;
+}
+.inst-bias-bullish { color: #22c55e; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
+.inst-bias-bearish { color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); }
+.inst-bias-neutral { color: #8ea0bb; background: rgba(142,160,187,0.08); border: 1px solid rgba(142,160,187,0.2); }
+
+.inst-indicators {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+.inst-indicator {
+  padding: 0.65rem 0.8rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+.inst-ind-label {
+  color: #8ea0bb;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+}
+.inst-ind-val {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #eef3fb;
+}
+.inst-ind-val.pos { color: #22c55e; }
+.inst-ind-val.neg { color: #f87171; }
+
+.inst-fvg {
+  display: grid;
+  gap: 0.5rem;
+}
+.fvg-zone {
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.fvg-bull { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #4ade80; }
+.fvg-bear { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
+
+@media (max-width: 768px) {
+  .inst-indicators { grid-template-columns: 1fr; }
+}

@@ -375,3 +375,34 @@ def get_realtime_quote(ticker: str, db: Session = Depends(get_db)) -> dict:
     # Cache result
     _quote_cache[ticker] = (_time.time() + _QUOTE_TTL, result)
     return result
+
+
+@router.get('/{ticker}/institutional', summary='Institutional analysis (VWAP/FVG/Delta/POC/Sweeps)')
+def get_institutional_analysis(ticker: str, db: Session = Depends(get_db)) -> dict:
+    """Run institutional indicators on daily price data."""
+    from app.services.technical.institutional import analyse_institutional
+    asset = db.query(Asset).filter(Asset.ticker == ticker.upper()).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail='Asset not found')
+    prices = (
+        db.query(AssetPriceDaily)
+        .filter(AssetPriceDaily.asset_id == asset.id)
+        .order_by(AssetPriceDaily.date.asc())
+        .all()
+    )
+    result = analyse_institutional(prices)
+    return {
+        'ticker': asset.ticker,
+        'score': result.score,
+        'bias': result.bias,
+        'factors': result.factors,
+        'vwap_20d': result.vwap_20d,
+        'vwap_bias': result.vwap_bias,
+        'fvg_bull': result.fvg_bull,
+        'fvg_bear': result.fvg_bear,
+        'poc_20d': result.poc_20d,
+        'poc_bias': result.poc_bias,
+        'delta_trend': result.delta_trend,
+        'sweep_recent': result.sweep_recent,
+        'details': result.details,
+    }

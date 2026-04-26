@@ -3,6 +3,22 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 
 
+
+interface InstitutionalData {
+  ticker: string
+  score: number
+  bias: string
+  factors: { name: string; value: number; detail: string }[]
+  vwap_20d: number | null
+  vwap_bias: string
+  fvg_bull: { top: number; bot: number; gap_pct: number } | null
+  fvg_bear: { top: number; bot: number; gap_pct: number } | null
+  poc_20d: number | null
+  poc_bias: string
+  delta_trend: string
+  sweep_recent: string | null
+}
+
 interface TrendData {
   ticker: string
   regime: string
@@ -127,6 +143,7 @@ export function AssetDetailPage() {
   const [data, setData] = useState<AssetDetail | null>(null)
   const [trend, setTrend] = useState<TrendData | null>(null)
   const [quote, setQuote] = useState<{ price: number; change: number | null; change_pct: number | null; source: string } | null>(null)
+  const [institutional, setInstitutional] = useState<InstitutionalData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -138,9 +155,11 @@ export function AssetDetailPage() {
       api.get<any>(`/assets/${ticker}/prices`).catch(() => null),
       api.get<TrendData>(`/assets/${ticker}/trend`).catch(() => null),
       api.get<any>(`/assets/${ticker}/quote`).catch(() => null),
-    ]).then(([scoreData, priceData, trendData, quoteData]) => {
+      api.get<InstitutionalData>(`/assets/${ticker}/institutional`).catch(() => null),
+    ]).then(([scoreData, priceData, trendData, quoteData, instData]) => {
       setTrend(trendData)
       if (quoteData) setQuote({ price: quoteData.price, change: quoteData.change, change_pct: quoteData.change_pct, source: quoteData.source })
+      setInstitutional(instData)
       setData({
         ticker: ticker.toUpperCase(),
         name: scoreData?.name || ticker,

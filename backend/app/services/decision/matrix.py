@@ -33,10 +33,11 @@ logger = logging.getLogger(__name__)
 
 
 WEIGHTS = {
-    'quality': 0.30,
-    'timing':  0.30,
-    'regime':  0.20,
-    'rr':      0.20,
+    'quality':       0.25,
+    'timing':        0.25,
+    'regime':        0.20,
+    'rr':            0.15,
+    'institutional': 0.15,
 }
 
 REGIME_BASE_SCORE = {
@@ -110,6 +111,18 @@ def _score_regime(score, prices) -> tuple[float, str, float]:
         logger.debug("regime calc failed: %s", e)
         return 50.0, 'UNKNOWN', 0.0
 
+
+
+
+def _score_institutional(prices) -> float:
+    """Institutional analysis score (VWAP/FVG/Delta/POC/Sweeps)."""
+    try:
+        from app.services.technical.institutional import analyse_institutional
+        result = analyse_institutional(prices)
+        return result.score
+    except Exception as e:
+        logger.debug("institutional score failed: %s", e)
+        return 50.0
 
 def _score_risk_reward(
     current_price: float,
@@ -281,12 +294,16 @@ def compute_decision_matrix(
 
         rr_score, rr_details = _score_risk_reward(current_price, technical, prices)
 
+        # Institutional analysis
+        inst_score = _score_institutional(prices)
+
         # Composite
         setup = (
-            q_score  * WEIGHTS['quality'] +
-            t_score  * WEIGHTS['timing'] +
-            r_score  * WEIGHTS['regime'] +
-            rr_score * WEIGHTS['rr']
+            q_score    * WEIGHTS['quality'] +
+            t_score    * WEIGHTS['timing'] +
+            r_score    * WEIGHTS['regime'] +
+            rr_score   * WEIGHTS['rr'] +
+            inst_score * WEIGHTS['institutional']
         )
 
         rows.append({
@@ -301,10 +318,11 @@ def compute_decision_matrix(
             'setup_score':    round(setup, 1),
             'verdict':        _verdict(setup),
             'sub_scores': {
-                'quality':       round(q_score, 1),
-                'timing':        round(t_score, 1),
-                'regime':        round(r_score, 1),
-                'risk_reward':   round(rr_score, 1),
+                'quality':        round(q_score, 1),
+                'timing':         round(t_score, 1),
+                'regime':         round(r_score, 1),
+                'risk_reward':    round(rr_score, 1),
+                'institutional':  round(inst_score, 1),
             },
             'regime':         regime_label,
             'regime_confidence': round(regime_conf, 2),
