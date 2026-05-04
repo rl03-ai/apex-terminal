@@ -260,28 +260,57 @@ def compute_decision_matrix(
     pre_candidates.sort(reverse=True)
     pre_candidates = pre_candidates[:60]
 
+    candidate_ids_ordered = [asset_id for _, asset_id, _ in pre_candidates]
+
+    # ── BATCH QUERIES — single DB round-trip per table ───────────────────────
+    assets_map = {
+        a.id: a
+        for a in db.query(Asset).filter(Asset.id.in_(candidate_ids_ordered)).all()
+    }
+
+    # Load all prices in one query, group by asset_id in memory
+    all_prices_raw = (
+        db.query(AssetPriceDaily)
+        .filter(AssetPriceDaily.asset_id.in_(candidate_ids_ordered))
+        .order_by(AssetPriceDaily.asset_id, AssetPriceDaily.date.asc())
+        .all()
+    )
+    prices_map: dict[str, list] = {}
+    for p in all_prices_raw:
+        prices_map.setdefault(p.asset_id, []).append(p)
+
+    # Load latest technical snapshot per asset in one query
+    from sqlalchemy import func as _func
+    latest_tech_sub = (
+        db.query(
+            AssetTechnicalSnapshot.asset_id,
+            _func.max(AssetTechnicalSnapshot.date).label('max_date')
+        )
+        .filter(AssetTechnicalSnapshot.asset_id.in_(candidate_ids_ordered))
+        .group_by(AssetTechnicalSnapshot.asset_id)
+        .subquery()
+    )
+    technical_map = {
+        t.asset_id: t
+        for t in db.query(AssetTechnicalSnapshot).join(
+            latest_tech_sub,
+            (AssetTechnicalSnapshot.asset_id == latest_tech_sub.c.asset_id) &
+            (AssetTechnicalSnapshot.date == latest_tech_sub.c.max_date)
+        ).all()
+    }
+
     rows: list[dict] = []
     for _, asset_id, score in pre_candidates:
-        asset = db.query(Asset).filter(Asset.id == asset_id).first()
+        asset = assets_map.get(asset_id)
         if not asset:
             continue
 
-        prices = (
-            db.query(AssetPriceDaily)
-            .filter(AssetPriceDaily.asset_id == asset_id)
-            .order_by(AssetPriceDaily.date.asc())
-            .all()
-        )
+        prices = prices_map.get(asset_id, [])
         if not prices:
             continue
         current_price = prices[-1].close
 
-        technical = (
-            db.query(AssetTechnicalSnapshot)
-            .filter(AssetTechnicalSnapshot.asset_id == asset_id)
-            .order_by(desc(AssetTechnicalSnapshot.date))
-            .first()
-        )
+        technical = technical_map.get(asset_id)
 
         # Compute the 4 sub-scores
         q_score = _score_quality(score)
