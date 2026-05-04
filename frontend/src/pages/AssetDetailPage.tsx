@@ -130,6 +130,97 @@ function ScoreRow({ label, desc, value, isRisk = false }: {
   )
 }
 
+
+function formatEventMoney(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return '$0'
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(1)}B`
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`
+  if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(0)}K`
+  return `${sign}$${abs.toFixed(0)}`
+}
+
+function formatEventDate(value: string | null | undefined) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function EventsAndInsidersCard({ summary }: { summary: EventsSummary }) {
+  const next = summary.next_earnings
+  const last = summary.last_earnings
+  const txs = summary.insider_transactions || []
+  const signalText: Record<EventsSummary['insider_signal'], string> = {
+    NET_BUYING: 'Net buying',
+    NET_SELLING: 'Net selling',
+    BALANCED: 'Balanced',
+  }
+
+  return (
+    <div className="card events-section">
+      <div className="section-header"><h2>Eventos & Insiders</h2></div>
+
+      <div className="events-section-title muted small">Earnings</div>
+      <div className="earnings-row">
+        <div className={`earnings-card ${next?.warning ? 'earnings-warning' : next ? 'earnings-ok' : 'earnings-unknown'}`}>
+          <div className="earnings-label">Próximos earnings</div>
+          <div className="earnings-date">{next ? formatEventDate(next.date) : 'Sem data disponível'}</div>
+          {next?.days_until != null && (
+            <div className="earnings-countdown" style={{ color: next.warning ? '#fbbf24' : '#6ec1ff' }}>
+              {next.days_until === 0 ? 'Hoje' : `Daqui a ${next.days_until} dias`}
+            </div>
+          )}
+          {next?.title && <div className="muted small">{next.title}</div>}
+        </div>
+
+        <div className={`earnings-card ${last?.beat ? 'earnings-beat' : last?.miss ? 'earnings-miss' : last ? 'earnings-neutral' : 'earnings-unknown'}`}>
+          <div className="earnings-label">Últimos earnings</div>
+          <div className="earnings-date">{last ? formatEventDate(last.date) : 'Sem histórico disponível'}</div>
+          {last && (
+            <div className="earnings-result" style={{ color: last.beat ? '#22c55e' : last.miss ? '#f87171' : '#8ea0bb' }}>
+              {last.beat ? 'Beat / positivo' : last.miss ? 'Miss / negativo' : 'Neutro'}
+            </div>
+          )}
+          {last?.title && <div className="muted small">{last.title}</div>}
+        </div>
+      </div>
+
+      <div className="events-section-title muted small" style={{ marginTop: '1rem' }}>Insiders · últimos 90 dias</div>
+      <div className="insider-summary-row">
+        <span className={`insider-signal-badge signal-${summary.insider_signal.toLowerCase()}`}>
+          {signalText[summary.insider_signal]}
+        </span>
+        <div className="insider-flows">
+          <span className="insider-flow-buy">Compras: {formatEventMoney(summary.total_bought_90d)}</span>
+          <span className="insider-flow-sell">Vendas: {formatEventMoney(summary.total_sold_90d)}</span>
+          <span className={summary.net_insider_flow >= 0 ? 'insider-flow-buy' : 'insider-flow-sell'}>
+            Net: {formatEventMoney(summary.net_insider_flow)}
+          </span>
+        </div>
+      </div>
+
+      {txs.length > 0 ? (
+        <div className="insider-tx-list">
+          {txs.map((tx, i) => (
+            <div key={`${tx.date}-${tx.name}-${i}`} className={`insider-tx insider-tx-${tx.type}`} title={tx.title}>
+              <span className="insider-tx-type" style={{ color: tx.type === 'buy' ? '#22c55e' : '#f87171' }}>
+                {tx.type === 'buy' ? 'B' : 'S'}
+              </span>
+              <span className="insider-tx-name">{tx.name}</span>
+              <span className="insider-tx-amount">{formatEventMoney(tx.amount)}</span>
+              <span className="muted small">{formatEventDate(tx.date)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="muted small">Sem transações de insiders registadas nos últimos 90 dias.</div>
+      )}
+    </div>
+  )
+}
+
 function MiniChart({ prices }: { prices: Array<{ date: string; close: number }> }) {
   if (!prices || prices.length < 2) return null
   const last90 = prices.slice(-90)
@@ -366,6 +457,9 @@ export function AssetDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Events & Insiders */}
+      {eventsSummary && <EventsAndInsidersCard summary={eventsSummary} />}
 
       {/* Regime */}
       {score?.score_regime && (
