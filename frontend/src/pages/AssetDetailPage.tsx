@@ -4,6 +4,36 @@ import { api } from '../api/client'
 
 
 
+
+interface EarningsInfo {
+  date: string
+  days_until?: number
+  title?: string
+  warning?: boolean
+  beat?: boolean
+  miss?: boolean
+  sentiment?: number
+}
+
+interface InsiderTx {
+  type: 'buy' | 'sell'
+  date: string
+  name: string
+  amount: number
+  title: string
+}
+
+interface EventsSummary {
+  ticker: string
+  next_earnings: EarningsInfo | null
+  last_earnings: EarningsInfo | null
+  insider_signal: 'NET_BUYING' | 'NET_SELLING' | 'BALANCED'
+  total_bought_90d: number
+  total_sold_90d: number
+  net_insider_flow: number
+  insider_transactions: InsiderTx[]
+}
+
 interface InstitutionalData {
   ticker: string
   score: number
@@ -144,6 +174,7 @@ export function AssetDetailPage() {
   const [trend, setTrend] = useState<TrendData | null>(null)
   const [quote, setQuote] = useState<{ price: number; change: number | null; change_pct: number | null; source: string } | null>(null)
   const [institutional, setInstitutional] = useState<InstitutionalData | null>(null)
+  const [eventsSummary, setEventsSummary] = useState<EventsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -156,10 +187,12 @@ export function AssetDetailPage() {
       api.get<TrendData>(`/assets/${ticker}/trend`).catch(() => null),
       api.get<any>(`/assets/${ticker}/quote`).catch(() => null),
       api.get<InstitutionalData>(`/assets/${ticker}/institutional`).catch(() => null),
-    ]).then(([scoreData, priceData, trendData, quoteData, instData]) => {
+      api.get<EventsSummary>(`/assets/${ticker}/events-summary`).catch(() => null),
+    ]).then(([scoreData, priceData, trendData, quoteData, instData, eventsData]) => {
       setTrend(trendData)
       if (quoteData) setQuote({ price: quoteData.price, change: quoteData.change, change_pct: quoteData.change_pct, source: quoteData.source })
       setInstitutional(instData)
+      setEventsSummary(eventsData)
       setData({
         ticker: ticker.toUpperCase(),
         name: scoreData?.name || ticker,

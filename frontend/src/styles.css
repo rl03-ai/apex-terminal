@@ -2238,3 +2238,78 @@ th {
 @media (max-width: 768px) {
   .inst-indicators { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   EARNINGS + INSIDER EVENTS CARD
+═══════════════════════════════════════════════════════════════════ */
+
+.events-section { }
+.events-section-title { margin-bottom: 0.6rem; }
+
+.earnings-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+}
+.earnings-card {
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+.earnings-warning { border-color: rgba(251,191,36,0.4) !important; background: rgba(251,191,36,0.06) !important; }
+.earnings-beat    { border-color: rgba(34,197,94,0.3);  background: rgba(34,197,94,0.05); }
+.earnings-miss    { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.05); }
+.earnings-neutral { border-color: rgba(255,255,255,0.08); }
+.earnings-unknown { border-color: rgba(255,255,255,0.05); }
+.earnings-ok      { border-color: rgba(110,193,255,0.25); background: rgba(110,193,255,0.04); }
+
+.earnings-label { color: #8ea0bb; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.earnings-date  { color: #eef3fb; font-weight: 700; font-size: 1rem; }
+.earnings-countdown { font-size: 0.85rem; font-weight: 700; margin-top: 2px; }
+.earnings-result    { font-size: 0.85rem; font-weight: 700; margin-top: 2px; }
+
+/* Insider summary */
+.insider-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+.insider-signal-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.signal-net_buying  { color: #22c55e; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
+.signal-net_selling { color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); }
+.signal-balanced    { color: #8ea0bb; background: rgba(142,160,187,0.08); border: 1px solid rgba(142,160,187,0.2); }
+
+.insider-flows { display: flex; gap: 0.6rem; font-size: 0.82rem; flex-wrap: wrap; }
+.insider-flow-buy  { color: #22c55e; font-weight: 600; }
+.insider-flow-sell { color: #f87171; font-weight: 600; }
+
+.insider-tx-list { display: grid; gap: 0.3rem; }
+.insider-tx {
+  display: grid;
+  grid-template-columns: 16px 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: rgba(255,255,255,0.02);
+}
+.insider-tx-buy  { border-left: 2px solid rgba(34,197,94,0.4); }
+.insider-tx-sell { border-left: 2px solid rgba(248,113,113,0.4); }
+.insider-tx-type   { font-weight: 700; font-size: 0.8rem; }
+.insider-tx-name   { color: #c7d3e8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insider-tx-amount { font-weight: 700; color: #eef3fb; white-space: nowrap; }
+
+@media (max-width: 768px) {
+  .earnings-row { grid-template-columns: 1fr; }
+  .insider-tx { grid-template-columns: 16px 1fr auto; }
+  .insider-tx .muted { display: none; }
+}

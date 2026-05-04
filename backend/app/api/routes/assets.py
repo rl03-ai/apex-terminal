@@ -406,3 +406,139 @@ def get_institutional_analysis(ticker: str, db: Session = Depends(get_db)) -> di
         'sweep_recent': result.sweep_recent,
         'details': result.details,
     }
+
+
+@router.get('/{ticker}/events-summary', summary='Earnings dates + insider activity summary')
+def get_events_summary(ticker: str, db: Session = Depends(get_db)) -> dict:
+    """Earnings calendar + insider buy/sell activity for asset detail page."""
+    from datetime import datetime, timedelta, timezone, date
+    import re
+
+    asset = db.query(Asset).filter(Asset.ticker == ticker.upper()).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail='Asset not found')
+
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    cutoff_past_90d = now - timedelta(days=90)
+    cutoff_future_60d = now + timedelta(days=60)
+
+    # Fetch all relevant events
+    events = (
+        db.query(AssetEvent)
+        .filter(
+            AssetEvent.asset_id == asset.id,
+            AssetEvent.event_type.in_([
+                'earnings_result', 'earnings_estimate',
+                'insider_buy', 'insider_sell',
+            ])
+        )
+        .order_by(AssetEvent.event_date.desc())
+        .limit(100)
+        .all()
+    )
+
+    def _norm_dt(dt):
+        if dt is None: return None
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    # ── Earnings ──────────────────────────────────────────────────────────────
+    earnings_past = []
+    earnings_upcoming = []
+
+    for e in events:
+        if e.event_type not in ('earnings_result', 'earnings_estimate'):
+            continue
+        dt = _norm_dt(e.event_date)
+        if dt is None:
+            continue
+        if dt <= now:
+            earnings_past.append(e)
+        else:
+            earnings_upcoming.append(e)
+
+    # Next earnings
+    next_earnings = None
+    if earnings_upcoming:
+        ne = min(earnings_upcoming, key=lambda e: _norm_dt(e.event_date))
+        days_until = (_norm_dt(ne.event_date).date() - today).days
+        next_earnings = {
+            'date': _norm_dt(ne.event_date).strftime('%Y-%m-%d'),
+            'days_until': days_until,
+            'title': ne.title,
+            'warning': days_until <= 14,  # within 2 weeks = elevated risk
+        }
+
+    # Last earnings result
+    last_earnings = None
+    if earnings_past:
+        le = earnings_past[0]  # most recent
+        last_earnings = {
+            'date': _norm_dt(le.event_date).strftime('%Y-%m-%d'),
+            'title': le.title,
+            'sentiment': le.sentiment_score,
+            'beat': (le.sentiment_score or 0) > 0.2,
+            'miss': (le.sentiment_score or 0) < -0.2,
+        }
+
+    # ── Insider Activity ──────────────────────────────────────────────────────
+    insider_events = [
+        e for e in events
+        if e.event_type in ('insider_buy', 'insider_sell')
+        and _norm_dt(e.event_date) >= cutoff_past_90d
+    ]
+
+    def _parse_amount(title: str) -> float:
+        m = re.search(r'\$([\d,]+(?:\.\d+)?)', title or '')
+        if m:
+            try:
+                return float(m.group(1).replace(',', ''))
+            except ValueError:
+                return 0.0
+        return 0.0
+
+    def _parse_name(title: str) -> str:
+        m = re.match('^(.+?)\\s+(bought|sold)\\s+\\$', title or '')
+        return m.group(1).strip() if m else 'Insider'
+
+    insider_transactions = []
+    total_bought = 0.0
+    total_sold = 0.0
+
+    for e in insider_events:
+        amount = _parse_amount(e.title or '')
+        name = _parse_name(e.title or '')
+        tx_type = 'buy' if e.event_type == 'insider_buy' else 'sell'
+        if tx_type == 'buy':
+            total_bought += amount
+        else:
+            total_sold += amount
+        insider_transactions.append({
+            'type': tx_type,
+            'date': _norm_dt(e.event_date).strftime('%Y-%m-%d') if e.event_date else None,
+            'name': name,
+            'amount': amount,
+            'title': e.title,
+        })
+
+    # Net signal
+    net = total_bought - total_sold
+    if net > 100_000 and total_bought > total_sold * 1.5:
+        insider_signal = 'NET_BUYING'
+    elif net < -100_000 and total_sold > total_bought * 1.5:
+        insider_signal = 'NET_SELLING'
+    else:
+        insider_signal = 'BALANCED'
+
+    return {
+        'ticker': asset.ticker,
+        'next_earnings': next_earnings,
+        'last_earnings': last_earnings,
+        'insider_signal': insider_signal,
+        'total_bought_90d': round(total_bought, 0),
+        'total_sold_90d': round(total_sold, 0),
+        'net_insider_flow': round(net, 0),
+        'insider_transactions': insider_transactions[:15],  # last 15
+    }
