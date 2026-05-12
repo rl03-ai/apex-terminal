@@ -268,10 +268,13 @@ def compute_decision_matrix(
         for a in db.query(Asset).filter(Asset.id.in_(candidate_ids_ordered)).all()
     }
 
-    # Load all prices in one query, group by asset_id in memory
+    # Load all prices in one query, group by asset_id in memory (last 100 days only)
+    from datetime import datetime, timedelta
+    cutoff_date = datetime.utcnow().date() - timedelta(days=100)
     all_prices_raw = (
         db.query(AssetPriceDaily)
         .filter(AssetPriceDaily.asset_id.in_(candidate_ids_ordered))
+        .filter(AssetPriceDaily.date >= cutoff_date)
         .order_by(AssetPriceDaily.asset_id, AssetPriceDaily.date.asc())
         .all()
     )
@@ -323,16 +326,17 @@ def compute_decision_matrix(
 
         rr_score, rr_details = _score_risk_reward(current_price, technical, prices)
 
-        # Institutional analysis
-        inst_score = _score_institutional(prices)
+        # Institutional analysis (disabled - memory intensive)
+        # inst_score = _score_institutional(prices)
+        inst_score = 50.0  # neutral placeholder
 
-        # Composite
+        # Composite (institutional weight redistributed to quality)
         setup = (
-            q_score    * WEIGHTS['quality'] +
-            t_score    * WEIGHTS['timing'] +
-            r_score    * WEIGHTS['regime'] +
-            rr_score   * WEIGHTS['rr'] +
-            inst_score * WEIGHTS['institutional']
+            q_score    * 0.30 +  # quality: 25% → 30%
+            t_score    * 0.30 +  # timing: 25% → 30%
+            r_score    * 0.20 +  # regime: 20%
+            rr_score   * 0.20    # rr: 15% → 20%
+            # inst_score * WEIGHTS['institutional']  # disabled for memory
         )
 
         rows.append({
@@ -351,7 +355,7 @@ def compute_decision_matrix(
                 'timing':         round(t_score, 1),
                 'regime':         round(r_score, 1),
                 'risk_reward':    round(rr_score, 1),
-                'institutional':  round(inst_score, 1),
+                # 'institutional':  round(inst_score, 1),  # disabled
             },
             'regime':         regime_label,
             'regime_confidence': round(regime_conf, 2),
